@@ -1,4 +1,4 @@
---# selene: deny(unused_variable)
+--# selene: allow(unused_variable)
 -- local Madwork = _G.Madwork
 --[[
 {Madwork}
