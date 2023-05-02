@@ -10,18 +10,18 @@ local ReplicaService = require(game.ServerScriptService.Server.ReplicaService)
 local Players = game:GetService("Players")
 local ProfileTemplate = {
 	PowerUnit = 0,
-    PremiumCurrency = 0,
-    SpecialDrops = {},
-    Pets = {},
-    Rebirths = 0,
-    Skins = {},
-    Skills = {},
-    Boosts = {PowerUnitBoost = 0, PremiumCurrencyBoost = 0, DamageBoost = 0},
-    RebirthPoints = 0,
-    PvpCurrency = 0,
-    DungeonRank = 0,
-    DungeionLevel = 0,
-    Transportation = {}
+	PremiumCurrency = 0,
+	SpecialDrops = {},
+	Pets = {},
+	Rebirths = 0,
+	Skins = {},
+	Skills = {},
+	Boosts = { PowerUnitBoost = 0, PremiumCurrencyBoost = 0, DamageBoost = 0 },
+	RebirthPoints = 0,
+	PvpCurrency = 0,
+	DungeonRank = 0,
+	DungeionLevel = 0,
+	Transportation = {},
 }
 local ProfileStore = ProfileService.GetProfileStore("PlayerData", ProfileTemplate)
 local Profiles = {} -- [player] = profile
@@ -35,25 +35,25 @@ local function PlayerAdded(player)
 		profile:AddUserId(player.UserId) -- GDPR compliance
 		profile:Reconcile() -- Fill in missing variables from ProfileTemplate (optional)
 
-        local playerReplica = ReplicaService.NewReplica({
-            ClassToken = ReplicaService.NewClassToken(player.Name..player.UserId),
-            Tags = {},
-            Data = profile.Data,
-            Replication = "All"
-        })
-        Replicas[player] = playerReplica
+		local playerReplica = ReplicaService.NewReplica({
+			ClassToken = ReplicaService.NewClassToken(player.Name .. player.UserId),
+			Tags = {},
+			Data = profile.Data,
+			Replication = "All",
+		})
+		Replicas[player] = playerReplica
 
 		profile:ListenToRelease(function()
 			Profiles[player] = nil
 			-- The profile could've been loaded on another Roblox server:
-            Replicas[player]:Destroy()
-            Replicas[player] = nil 
+			Replicas[player]:Destroy()
+			Replicas[player] = nil
 			player:Kick()
 		end)
 		if player:IsDescendantOf(Players) == true then
 			Profiles[player] = profile
 			-- A profile has been successfully loaded:
-			print(player.Name.."'s profile has loaded successfully", profile.Data)
+			print(player.Name .. "'s profile has loaded successfully", profile.Data)
 		else
 			-- Player left before the profile loaded:
 			profile:Release()
@@ -69,20 +69,20 @@ end
 
 ----- Initialize -----
 module.init = function()
-    -- In case Players have joined the server earlier than this function ran
-    for _, player in ipairs(Players:GetPlayers()) do
-        task.spawn(PlayerAdded, player)
-    end
+	-- In case Players have joined the server earlier than this function ran
+	for _, player in ipairs(Players:GetPlayers()) do
+		task.spawn(PlayerAdded, player)
+	end
 
-    ----- Connections -----
-    Players.PlayerAdded:Connect(PlayerAdded)
+	----- Connections -----
+	Players.PlayerAdded:Connect(PlayerAdded)
 
-    Players.PlayerRemoving:Connect(function(player)
-        local profile = Profiles[player]
-        if profile ~= nil then
-            profile:Release()
-        end
-    end)
+	Players.PlayerRemoving:Connect(function(player)
+		local profile = Profiles[player]
+		if profile ~= nil then
+			profile:Release()
+		end
+	end)
 end
 
 return module
