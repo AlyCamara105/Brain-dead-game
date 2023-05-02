@@ -17,7 +17,7 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
     - name: Lint
       run: |
-        selene ./src
+        selene ./src/client ./src/server
   style:
     name: Styling
     runs-on: ubuntu-latest
