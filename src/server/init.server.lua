@@ -1,5 +1,9 @@
+----- Services -----
+
+local ServerScriptService = game:GetService("ServerScriptService")
+
 ----- Loaded Modules -----
 
-local DataHandler = require(game.ServerScriptService.Server.DataHandler)
+local DataHandler = require(ServerScriptService.Server.DataHandler)
 
-DataHandler.init()
+DataHandler.Init()

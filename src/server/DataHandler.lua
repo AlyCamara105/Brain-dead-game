@@ -1,9 +1,13 @@
 local module = {}
 
+----- Services -----
+
+local ServerScriptService = game:GetService("ServerScriptService")
+
 ----- Loaded Modules -----
 
-local ProfileService = require(game.ServerScriptService.Server.ProfileService)
-local ReplicaService = require(game.ServerScriptService.Server.ReplicaService)
+local ProfileService = require(ServerScriptService.Server.ProfileService)
+local ReplicaService = require(ServerScriptService.Server.ReplicaService)
 
 ----- Private Variables -----
 
@@ -68,7 +72,7 @@ end
 ----- Public Functions -----
 
 ----- Initialize -----
-module.init = function()
+module.Init = function()
 	-- In case Players have joined the server earlier than this function ran
 	for _, player in ipairs(Players:GetPlayers()) do
 		task.spawn(PlayerAdded, player)
