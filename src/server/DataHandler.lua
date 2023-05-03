@@ -3,6 +3,7 @@ local module = {}
 ----- Services -----
 
 local ServerScriptService = game:GetService("ServerScriptService")
+local RunService = game:GetService("RunService")
 
 ----- Loaded Modules -----
 
@@ -28,8 +29,8 @@ local ProfileTemplate = {
 	Transportation = {},
 }
 local ProfileStore = ProfileService.GetProfileStore("PlayerData", ProfileTemplate)
-local Profiles = {} -- [player] = profile
-local Replicas = {} -- [player] = replica
+local Masters = {}
+local TimeLastPowerUnitGiven = 0
 
 ----- Private Functions -----
 
@@ -38,26 +39,21 @@ local function PlayerAdded(player)
 	if profile ~= nil then
 		profile:AddUserId(player.UserId) -- GDPR compliance
 		profile:Reconcile() -- Fill in missing variables from ProfileTemplate (optional)
-
-		local playerReplica = ReplicaService.NewReplica({
-			ClassToken = ReplicaService.NewClassToken(player.Name .. player.UserId),
-			Tags = {},
-			Data = profile.Data,
-			Replication = "All",
-		})
-		Replicas[player] = playerReplica
-
 		profile:ListenToRelease(function()
-			Profiles[player] = nil
 			-- The profile could've been loaded on another Roblox server:
-			Replicas[player]:Destroy()
-			Replicas[player] = nil
+			Masters[player].Replica:Destroy()
+			Masters[player] = nil
 			player:Kick()
 		end)
 		if player:IsDescendantOf(Players) == true then
-			Profiles[player] = profile
 			-- A profile has been successfully loaded:
-			print(player.Name .. "'s profile has loaded successfully", profile.Data)
+			local replica = ReplicaService.NewReplica({
+				ClassToken = ReplicaService.NewClassToken(player.Name .. player.UserId),
+				Tags = { Player = player },
+				Data = profile.Data,
+				Replication = "All",
+			})
+			Masters[player] = { Profile = profile, Replica = replica }
 		else
 			-- Player left before the profile loaded:
 			profile:Release()
@@ -66,6 +62,23 @@ local function PlayerAdded(player)
 		-- The profile couldn't be loaded possibly due to other
 		--   Roblox servers trying to load this profile at the same time:
 		player:Kick()
+	end
+end
+
+local function GetNewPower(oldPower)
+	return oldPower + 12
+end
+
+local function SetPower(replica, newPower)
+	replica:SetValue({ "PowerUnit" }, newPower)
+end
+
+local function SetPowerUnits()
+	for _, master in pairs(Masters) do
+		if master.Profile:IsActive() then
+			local replica = master.Replica
+			SetPower(replica, GetNewPower(replica.Data.PowerUnit))
+		end
 	end
 end
 
@@ -82,9 +95,18 @@ module.Init = function()
 	Players.PlayerAdded:Connect(PlayerAdded)
 
 	Players.PlayerRemoving:Connect(function(player)
-		local profile = Profiles[player]
+		local profile = Masters[player].Profile
 		if profile ~= nil then
 			profile:Release()
+		end
+	end)
+
+	RunService.Heartbeat:Connect(function()
+		local currentTime = tick()
+		local difference = currentTime - TimeLastPowerUnitGiven
+		if difference >= 1 then
+			TimeLastPowerUnitGiven = currentTime
+			SetPowerUnits()
 		end
 	end)
 end

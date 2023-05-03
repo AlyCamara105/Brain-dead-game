@@ -11,7 +11,9 @@ local ReplicaController = require(game.ReplicatedStorage.Shared.ReplicaControlle
 local Player = Players.LocalPlayer
 
 ReplicaController.ReplicaOfClassCreated(Player.Name .. Player.UserId, function(replica)
-	print(Player.Name .. " received a copy of their data:", replica.Data)
+	replica:ListenToChange({ "PowerUnit" }, function(newPower, oldPower)
+		print(Player.Name .. " has updated their power unit from " .. oldPower .. " to " .. newPower)
+	end)
 end)
 
 ReplicaController.RequestData()
