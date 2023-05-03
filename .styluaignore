@@ -1,2 +1,3 @@
 /src/shared
 /src/server/ReplicaService.lua
+/src/server/ProfileService.lua

@@ -1,3 +1,4 @@
+--# selene: allow(shadowing, manual_table_clone)
 -- local Madwork = _G.Madwork
 --[[
 {Madwork}
