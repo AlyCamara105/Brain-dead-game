@@ -65,19 +65,63 @@ local function PlayerAdded(player)
 	end
 end
 
-local function GetNewPower(oldPower)
-	return oldPower + 12
+local function SetPremiumCurrency(replica, amount)
+	replica:SetValue({ "PremiumCurrency" }, amount)
 end
 
-local function SetPower(replica, newPower)
+local function SetRebirths(replica, amount)
+	replica:SetValue({ "Rebirths" }, amount)
+end
+
+local function SetPvpCurrency(replica, amount)
+	replica:SetValue({ "PvpCurrency" }, amount)
+end
+
+local function SetDungeonRank(replica, amount)
+	replica:SetValue({ "DungeonRank" }, amount)
+end
+
+local function SetDungeonLevel(replica, level)
+	replica:SetValue({ "DungeonLevel" }, level)
+end
+
+local function SetRebirthPoints(replica, points)
+	replica:SetValue({ "RebirthPoints" }, points)
+end
+
+local function SetSpecialDrop(replica, index, amount)
+	replica:ArraySet({ "SpecialDrops" }, index, amount)
+end
+
+local function SetPets(replica, index, amount)
+	replica:ArraySet({ "Pets" }, index, amount)
+end
+
+local function SetSkins(replica, index, value)
+	replica:ArraySet({ "Skins" }, index, value)
+end
+
+local function SetSkills(replica, index, value)
+	replica:ArraySet({ "Skills" }, index, value)
+end
+
+local function SetTransportation(replica, index, value)
+	replica:ArraySet({ "Transportation" }, index, value)
+end
+
+local function SetPowerUnit(replica, newPower)
 	replica:SetValue({ "PowerUnit" }, newPower)
+end
+
+local function GetNewPower(oldPower)
+	return oldPower + 12
 end
 
 local function SetPowerUnits()
 	for _, master in pairs(Masters) do
 		if master.Profile:IsActive() then
 			local replica = master.Replica
-			SetPower(replica, GetNewPower(replica.Data.PowerUnit))
+			SetPowerUnit(replica, GetNewPower(replica.Data.PowerUnit))
 		end
 	end
 end
