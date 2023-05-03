@@ -4,6 +4,7 @@ local module = {}
 
 local ServerScriptService = game:GetService("ServerScriptService")
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 ----- Loaded Modules -----
 
@@ -29,6 +30,7 @@ local ProfileTemplate = {
 	Transportation = {},
 }
 local ProfileStore = ProfileService.GetProfileStore("PlayerData", ProfileTemplate)
+local PlayerWriteLib = ReplicatedStorage.Shared.PlayerWriteLib
 local Masters = {}
 local TimeLastPowerUnitGiven = 0
 
@@ -52,6 +54,7 @@ local function PlayerAdded(player)
 				Tags = { Player = player },
 				Data = profile.Data,
 				Replication = "All",
+				WriteLib = PlayerWriteLib,
 			})
 			Masters[player] = { Profile = profile, Replica = replica }
 		else
@@ -89,24 +92,24 @@ local function SetRebirthPoints(replica, points)
 	replica:SetValue({ "RebirthPoints" }, points)
 end
 
-local function SetSpecialDrop(replica, index, amount)
-	replica:ArraySet({ "SpecialDrops" }, index, amount)
+local function SetSpecialDrops(replica, specialDrop, amount)
+	replica:Write("SetSpecialDrops", specialDrop, amount)
 end
 
-local function SetPets(replica, index, amount)
-	replica:ArraySet({ "Pets" }, index, amount)
+local function SetPets(replica, pet, amount)
+	replica:Write("SetPets", pet, amount)
 end
 
-local function SetSkins(replica, index, value)
-	replica:ArraySet({ "Skins" }, index, value)
+local function SetSkins(replica, value)
+	replica:ArrayInsert({ "Skins" }, value)
 end
 
-local function SetSkills(replica, index, value)
-	replica:ArraySet({ "Skills" }, index, value)
+local function SetSkills(replica, value)
+	replica:ArrayInsert({ "Skills" }, value)
 end
 
-local function SetTransportation(replica, index, value)
-	replica:ArraySet({ "Transportation" }, index, value)
+local function SetTransportation(replica, value)
+	replica:ArrayInsert({ "Transportation" }, value)
 end
 
 local function SetPowerUnit(replica, newPower)
