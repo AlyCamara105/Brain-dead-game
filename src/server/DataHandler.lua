@@ -33,6 +33,7 @@ local ProfileStore = ProfileService.GetProfileStore("PlayerData", ProfileTemplat
 local PlayerWriteLib = ReplicatedStorage.Shared.PlayerWriteLib
 local Masters = {}
 local TimeLastPowerUnitGiven = 0
+local Ceil = math.ceil
 
 ----- Private Functions -----
 
@@ -116,15 +117,23 @@ local function SetPowerUnit(replica, newPower)
 	replica:SetValue({ "PowerUnit" }, newPower)
 end
 
-local function GetNewPower(oldPower)
-	return oldPower + 12
+local function GetPowerUnitIncrement(premiumCurrency)
+	return premiumCurrency + Ceil(premiumCurrency/4) + 1
+end
+
+local function GetNewPowerUnit(premiumCurrency, oldPower)
+	--[[
+		Could optimize this by making the increment of power only update when the premium currency changes and having that increment
+		saved somewhere to be added to the oldPower here, ideally not in the datastore as it could easily be calculated.
+	]]
+	return oldPower + GetPowerUnitIncrement(premiumCurrency)
 end
 
 local function SetPowerUnits()
 	for _, master in pairs(Masters) do
 		if master.Profile:IsActive() then
 			local replica = master.Replica
-			SetPowerUnit(replica, GetNewPower(replica.Data.PowerUnit))
+			SetPowerUnit(replica, GetNewPowerUnit(replica.Data.PremiumCurrency, replica.Data.PowerUnit))
 		end
 	end
 end
