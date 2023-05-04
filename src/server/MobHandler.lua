@@ -12,27 +12,40 @@ local Zone = require(ReplicatedStorage.Shared.Zone)
 ----- Private Functions -----
 
 local function AddTag(mobPlaceholder, area, row, number)
-    CollectionService:AddTag(mobPlaceholder, area.."_"..row.."_"..number)
+	CollectionService:AddTag(mobPlaceholder, area .. "_" .. row .. "_" .. number)
+end
+
+local function AddAllMobTags(mobsFolder)
+    -- For every area folder in the mobs folder
+	for _, areaFolder in ipairs(mobsFolder:GetChildren()) do
+		local mobArea = areaFolder.Name
+		-- For every row folder in the mob folder
+		for _, rowFolder in ipairs(areaFolder:GetChildren()) do
+			local mobRow = rowFolder.Name
+			-- For every mob in the row folder
+			for mobNumber, mobPlaceholder in ipairs(rowFolder:GetChildren()) do
+				AddTag(mobPlaceholder, mobArea, mobRow, mobNumber)
+			end
+		end
+	end
+end
+
+local function InitializeMobZones(mobsFolder)
+    local MobZones = Zone.new(mobsFolder)
+
+    MobZones.itemEntered:Connect(function(item)
+        print(item.Name.." entered a mob zone!")
+    end)
 end
 
 ----- Public Functions -----
 
 ----- Initialization -----
 module.Init = function()
-    local mobsFolder = game.Workspace.Map.Mobs
+	local mobsFolder = game.Workspace.Map.Mobs
 
-    -- For every area folder in the mobs folder
-    for _, areaFolder in ipairs(mobsFolder:GetChildren()) do
-        local mobArea = areaFolder.Name
-        -- For every row folder in the mob folder
-        for _, rowFolder in ipairs(areaFolder:GetChildren()) do
-            local mobRow = rowFolder.Name
-            -- For every mob in the row folder
-            for mobNumber, mobPlaceholder in ipairs(rowFolder:GetChildren()) do
-                AddTag(mobPlaceholder, mobArea, mobRow, mobNumber)
-            end
-        end
-    end
+    AddAllMobTags(mobsFolder)
+    InitializeMobZones(mobsFolder)
 end
 
 return module
