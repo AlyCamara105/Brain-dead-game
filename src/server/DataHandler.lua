@@ -118,7 +118,7 @@ local function SetPowerUnit(replica, newPower)
 end
 
 local function GetPowerUnitIncrement(premiumCurrency)
-	return premiumCurrency + Ceil(premiumCurrency/4) + 1
+	return premiumCurrency + Ceil(premiumCurrency / 4) + 1
 end
 
 local function GetNewPowerUnit(premiumCurrency, oldPower)
