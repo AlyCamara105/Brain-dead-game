@@ -27,7 +27,9 @@
       "$properties": {
         "FilteringEnabled": true
       },
-      "$path": "src/server_storage/Area1.rbxm"
+      "Area1": {
+        "$path": "src/map_assets/Area1.rbxm"
+      }
     },
     "Lighting": {
       "$properties": {

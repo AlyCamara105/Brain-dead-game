@@ -7,7 +7,7 @@ local CollectionService = game:GetService("CollectionService")
 ----- Private Functions -----
 
 local function LoadArea1Mobs()
-    local Area1MobsFolder = game.Workspace.Mobs
+    local Area1MobsFolder = game.Workspace.Area1.Mobs
 
     for _, rowFolder in ipairs(Area1MobsFolder:GetChildren()) do
         local mobRow = rowFolder.Name
