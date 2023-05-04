@@ -3,10 +3,18 @@ local module = {}
 ----- Services -----
 
 local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+----- Loaded Modules -----
+
+local Zone = require(ReplicatedStorage.Shared.Zone)
 
 ----- Private Functions -----
 
-local function LoadArea1Mobs()
+----- Public Functions -----
+
+----- Initialization -----
+module.Init = function()
     local Area1MobsFolder = game.Workspace.Area1.Mobs
 
     for _, rowFolder in ipairs(Area1MobsFolder:GetChildren()) do
@@ -15,13 +23,6 @@ local function LoadArea1Mobs()
             CollectionService:AddTag(mobPlaceHolder, "A1"..mobRow.."_"..mobNumber)
         end
     end
-end
-
------ Public Functions -----
-
------ Initialization -----
-module.Init = function()
-    LoadArea1Mobs()
 end
 
 return module
