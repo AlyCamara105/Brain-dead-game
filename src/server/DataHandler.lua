@@ -78,7 +78,11 @@ local function SetPremiumCurrency(replica, amount)
 	end
 end
 
--- Add a set damage function
+local function SetDamage(replica, amount)
+	if replica then
+		replica:SetValue({ "Damage" }, amount)
+	end
+end
 
 local function SetRebirths(replica, amount)
 	if replica then
