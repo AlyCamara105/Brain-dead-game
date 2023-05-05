@@ -20,7 +20,7 @@ local RebirthInfo = require(ReplicatedStorage.Shared.RebirthInfo)
 local Players = game:GetService("Players")
 local ProfileTemplate = {
 	PowerUnit = 0,
-	PremiumCurrency = 0,
+	PremiumCurrency = 500,
 	SpecialDrops = {},
 	Pets = {},
 	Rebirths = 0,
@@ -150,6 +150,36 @@ local function SetRebirthPoints(replica, points)
 	end
 end
 
+local function GetNewDamageBoost(oldDamageBoost, incrementDamageBoost)
+	return oldDamageBoost + incrementDamageBoost
+end
+
+local function SetDamageBoost(replica, amount)
+	if replica then
+		replica:SetValue({ "Boosts", "DamageBoost" }, amount)
+	end
+end
+
+local function GetNewPremiumCurrencyBoost(oldPremiumCurrencyBoost, incrementPremiumCurrencyBoost)
+	return oldPremiumCurrencyBoost + incrementPremiumCurrencyBoost
+end
+
+local function SetPremiumCurrencyBoost(replica, amount)
+	if replica then
+		replica:SetValue({ "Boosts", "PremiumCurrencyBoost" }, amount)
+	end
+end
+
+local function GetNewPowerUnitBoost(oldPowerUnitBoost, incrementPowerUnitBoost)
+	return oldPowerUnitBoost + incrementPowerUnitBoost
+end
+
+local function SetPowerUnitBoost(replica, amount)
+	if replica then
+		replica:SetValue({ "Boosts", "PowerUnitBoost" }, amount)
+	end
+end
+
 local function SetSpecialDrops(replica, specialDrop, amount)
 	if replica then
 		replica:Write("SetSpecialDrops", specialDrop, amount)
@@ -203,26 +233,30 @@ local function SetPowerUnits()
 		if master.Profile:IsActive() then
 			local replica = master.Replica
 			local playerData = replica.Data
-			SetPowerUnit(replica, GetNewPowerUnit(playerData.PremiumCurrency, playerData.PowerUnit, playerData.Boosts.PowerUnitBoost))
+			SetPowerUnit(
+				replica,
+				GetNewPowerUnit(playerData.PremiumCurrency, playerData.PowerUnit, playerData.Boosts.PowerUnitBoost)
+			)
 			SetDamage(replica, GetNewDamage(playerData.PowerUnit, playerData.Boosts.DamageBoost))
 		end
 	end
 end
 
-local function ProcessRebirthRequest(player)
-	local playerProfile = ServerData.GetPlayerProfile(player)
-	if playerProfile then
-		local playerData = playerProfile.Data
-		if RebirthInfo.CanRebirth(playerData.Rebirths, playerData.premiumCurrency) then
-			local playerReplica = ServerData.GetPlayerReplica(player)
-			if playerReplica then
-				SetPremiumCurrency(playerReplica, 0)
-				SetPowerUnit(playerReplica, 0)
-				SetRebirths(playerReplica, GetNewRebirth(playerData.Rebirths))
-				SetRebirthPoints(playerReplica, GetNewRebirthPoints())
-				-- Increase damage boost, and power unit boost
-			end
-		end
+local function ProcessRebirthRequest(playerReplica)
+	local playerData = playerReplica.Data
+	if RebirthInfo.CanRebirth(playerData.Rebirths, playerData.PremiumCurrency) then
+		SetPremiumCurrency(playerReplica, 0)
+		SetPowerUnit(playerReplica, 0)
+		SetRebirths(playerReplica, GetNewRebirth(playerData.Rebirths))
+		SetRebirthPoints(playerReplica, GetNewRebirthPoints(playerData.RebirthPoints))
+		SetDamageBoost(
+			playerReplica,
+			GetNewDamageBoost(playerData.Boosts.DamageBoost, RebirthInfo.GetRebirthDamageBoost(playerData.Rebirths))
+		)
+		SetPowerUnitBoost(
+			playerReplica,
+			GetNewPowerUnitBoost(playerData.Boosts.PowerUnitBoost, RebirthInfo.GetRebirthPowerUnitBoost(playerData.Rebirths))
+		)
 	end
 end
 
