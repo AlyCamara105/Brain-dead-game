@@ -87,6 +87,7 @@ local function SetPremiumCurrency(replica, amount)
 end
 
 local function GivePremiumCurrency(player, premiumCurrency)
+	-- Make sure to add the premium currency boost
 	local playerProfile = ServerData.GetPlayerProfile(player)
 	if playerProfile then
 		local oldPremiumCurrency = playerProfile.Data.PremiumCurrency
@@ -194,13 +195,14 @@ local function ProcessRebirthRequest(player)
 				SetPowerUnit(playerReplica, 0)
 				SetRebirths(playerReplica, GetNewRebirth(playerData.Rebirths))
 				SetRebirthPoints(playerReplica, GetNewRebirthPoints())
-				-- Increase damage, and power unit boost
+				-- Increase damage boost, and power unit boost
 			end
 		end
 	end
 end
 
 local function GetPowerUnitIncrement(premiumCurrency)
+	-- Make sure to include the power unit boosts
 	return premiumCurrency + Ceil(premiumCurrency / 4) + 1
 end
 
@@ -217,6 +219,7 @@ local function SetPowerUnits()
 		if master.Profile:IsActive() then
 			local replica = master.Replica
 			SetPowerUnit(replica, GetNewPowerUnit(replica.Data.PremiumCurrency, replica.Data.PowerUnit))
+			-- Update the damage
 		end
 	end
 end
