@@ -26,13 +26,13 @@ local ProfileTemplate = {
 	Rebirths = 0,
 	Skins = {},
 	Skills = {},
-	Boosts = { PowerUnitBoost = 0, PremiumCurrencyBoost = 0, DamageBoost = 0 },
+	Boosts = { PowerUnitBoost = 100, PremiumCurrencyBoost = 0, DamageBoost = 100 },
 	RebirthPoints = 0,
 	PvpCurrency = 0,
 	DungeonRank = 0,
 	DungeionLevel = 0,
 	Transportation = {},
-	Damage = 50,
+	Damage = 0,
 	PowerModeLevel = 0,
 }
 local ProfileStore = ProfileService.GetProfileStore("PlayerData", ProfileTemplate)
@@ -74,6 +74,10 @@ local function PlayerAdded(player)
 	end
 end
 
+local function GetBoostMultiplier(boost)
+	return 1 + (boost / 100)
+end
+
 local function SetPowerModeLevel(replica, amount)
 	if replica then
 		replica:SetValue({ "PowerModeLevel", amount })
@@ -86,14 +90,8 @@ local function SetPremiumCurrency(replica, amount)
 	end
 end
 
-local function GivePremiumCurrency(player, premiumCurrency)
-	-- Make sure to add the premium currency boost
-	local playerProfile = ServerData.GetPlayerProfile(player)
-	if playerProfile then
-		local oldPremiumCurrency = playerProfile.Data.PremiumCurrency
-		local newPremiumCurrency = oldPremiumCurrency + premiumCurrency
-		SetPremiumCurrency(ServerData.GetPlayerReplica(player), newPremiumCurrency)
-	end
+local function GetNewPremuimCurrency(oldPremiumCurrency, incrementPremiumCurrency, premiumCurrencyBoost)
+	return oldPremiumCurrency + (incrementPremiumCurrency * GetBoostMultiplier(premiumCurrencyBoost))
 end
 
 local function SetDamage(replica, amount)
@@ -102,18 +100,8 @@ local function SetDamage(replica, amount)
 	end
 end
 
-local function GetRebirthsIncrement()
-	return 1
-end
-
-local function GetNewRebirth(oldRebirth)
-	return oldRebirth + GetRebirthsIncrement()
-end
-
-local function SetRebirths(replica, amount)
-	if replica then
-		replica:SetValue({ "Rebirths" }, amount)
-	end
+local function GetNewDamage(powerUnit, damageBoost)
+	return powerUnit * GetBoostMultiplier(damageBoost)
 end
 
 local function SetPvpCurrency(replica, amount)
@@ -131,6 +119,20 @@ end
 local function SetDungeonLevel(replica, level)
 	if replica then
 		replica:SetValue({ "DungeonLevel" }, level)
+	end
+end
+
+local function GetRebirthsIncrement()
+	return 1
+end
+
+local function GetNewRebirth(oldRebirth)
+	return oldRebirth + GetRebirthsIncrement()
+end
+
+local function SetRebirths(replica, amount)
+	if replica then
+		replica:SetValue({ "Rebirths" }, amount)
 	end
 end
 
@@ -184,6 +186,29 @@ local function SetPowerUnit(replica, newPower)
 	end
 end
 
+local function GetPowerUnitIncrement(premiumCurrency)
+	return premiumCurrency + Ceil(premiumCurrency / 4) + 1
+end
+
+local function GetNewPowerUnit(premiumCurrency, oldPower, powerUnitBoost)
+	--[[
+		Could optimize this by making the increment of power only update when the premium currency changes and having that increment
+		saved somewhere to be added to the oldPower here, ideally not in the datastore as it could easily be calculated.
+	]]
+	return oldPower + (GetPowerUnitIncrement(premiumCurrency) * GetBoostMultiplier(powerUnitBoost))
+end
+
+local function SetPowerUnits()
+	for _, master in pairs(ServerData.PlayerDataMasters) do
+		if master.Profile:IsActive() then
+			local replica = master.Replica
+			local playerData = replica.Data
+			SetPowerUnit(replica, GetNewPowerUnit(playerData.PremiumCurrency, playerData.PowerUnit, playerData.Boosts.PowerUnitBoost))
+			SetDamage(replica, GetNewDamage(playerData.PowerUnit, playerData.Boosts.DamageBoost))
+		end
+	end
+end
+
 local function ProcessRebirthRequest(player)
 	local playerProfile = ServerData.GetPlayerProfile(player)
 	if playerProfile then
@@ -197,29 +222,6 @@ local function ProcessRebirthRequest(player)
 				SetRebirthPoints(playerReplica, GetNewRebirthPoints())
 				-- Increase damage boost, and power unit boost
 			end
-		end
-	end
-end
-
-local function GetPowerUnitIncrement(premiumCurrency)
-	-- Make sure to include the power unit boosts
-	return premiumCurrency + Ceil(premiumCurrency / 4) + 1
-end
-
-local function GetNewPowerUnit(premiumCurrency, oldPower)
-	--[[
-		Could optimize this by making the increment of power only update when the premium currency changes and having that increment
-		saved somewhere to be added to the oldPower here, ideally not in the datastore as it could easily be calculated.
-	]]
-	return oldPower + GetPowerUnitIncrement(premiumCurrency)
-end
-
-local function SetPowerUnits()
-	for _, master in pairs(ServerData.PlayerDataMasters) do
-		if master.Profile:IsActive() then
-			local replica = master.Replica
-			SetPowerUnit(replica, GetNewPowerUnit(replica.Data.PremiumCurrency, replica.Data.PowerUnit))
-			-- Update the damage
 		end
 	end
 end
@@ -255,8 +257,15 @@ end
 
 ----- Signal Connections -----
 SignalManager["GivePremiumCurrency"] = Signal.new()
-SignalManager["GivePremiumCurrency"]:Connect(function(player, premiumCurrency)
-	GivePremiumCurrency(player, premiumCurrency)
+SignalManager["GivePremiumCurrency"]:Connect(function(player, incrementPremiumCurrency)
+	local replica = ServerData.GetPlayerReplica(player)
+	if replica then
+		local playerData = replica.Data
+		SetPremiumCurrency(
+			replica,
+			GetNewPremuimCurrency(playerData.PremiumCurrency, incrementPremiumCurrency, playerData.Boosts.PremiumCurrencyBoost)
+		)
+	end
 end)
 
 return module
