@@ -1,3 +1,16 @@
-/src/shared
+/src/shared/Rbxnet
+/src/shared/Roact
+/src/shared/RoactRodux
+/src/shared/Rodux
+/src/shared/Topbar
+/src/shared/Zone
+/src/shared/MadworkMaid.lua
+/src/shared/MadworkScriptSignal.lua
+/src/shared/Maid.lua
+/src/shared/Promise.lua
+/src/shared/RateLimiter.lua
+/src/shared/ReplicaController.lua
+/src/shared/Signal.lua
+/src/shared/t.lua
 /src/server/ReplicaService.lua
 /src/server/ProfileService.lua
