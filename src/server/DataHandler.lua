@@ -105,7 +105,7 @@ local function GetNewDamage(powerUnit, damageBoost)
 	return math.ceil(powerUnit * GetBoostMultiplier(damageBoost))
 end
 
-local function SetPvpCurrency(replica, amount)
+--[[local function SetPvpCurrency(replica, amount)
 	if replica then
 		replica:SetValue({ "PvpCurrency" }, amount)
 	end
@@ -121,7 +121,7 @@ local function SetDungeonLevel(replica, level)
 	if replica then
 		replica:SetValue({ "DungeonLevel" }, level)
 	end
-end
+end]]
 
 local function GetRebirthsIncrement()
 	return 1
@@ -171,7 +171,7 @@ local function SetSpecialDrops(replica, specialDrop, amount)
 	end
 end
 
-local function SetPets(replica, pet, amount)
+--[[local function SetPets(replica, pet, amount)
 	if replica then
 		replica:Write("SetPets", pet, amount)
 	end
@@ -193,7 +193,7 @@ local function SetTransportation(replica, value)
 	if replica then
 		replica:ArrayInsert({ "Transportation" }, value)
 	end
-end
+end]]
 
 local function SetPowerUnit(replica, newPower)
 	if replica then
