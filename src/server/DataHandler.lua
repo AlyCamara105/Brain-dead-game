@@ -10,6 +10,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ProfileService = require(ServerScriptService.Server.ProfileService)
 local ReplicaService = require(ServerScriptService.Server.ReplicaService)
+local ServerData = require(ServerScriptService.Server.ServerData)
+local Signal = require(ReplicatedStorage.Shared.Signal)
+local SignalManager = require(ServerScriptService.Server.SignalManager)
 
 ----- Private Variables -----
 
@@ -31,11 +34,28 @@ local ProfileTemplate = {
 }
 local ProfileStore = ProfileService.GetProfileStore("PlayerData", ProfileTemplate)
 local PlayerWriteLib = ReplicatedStorage.Shared.PlayerWriteLib
-local Masters = {}
 local TimeLastPowerUnitGiven = 0
 local Ceil = math.ceil
 
 ----- Private Functions -----
+
+local function GetPlayerReplica(player)
+	local replica = nil
+	local playerMasterData = ServerData.PlayerDataMasters[player]
+	if playerMasterData then
+		replica = playerMasterData.Replica
+	end
+	return replica
+end
+
+local function GetPlayerProfile(player)
+	local profile = nil
+	local playerMasterData = ServerData.PlayerDataMasters[player]
+	if playerMasterData then
+		profile = playerMasterData.Profile
+	end
+	return profile
+end
 
 local function PlayerAdded(player)
 	local profile = ProfileStore:LoadProfileAsync("Player_" .. player.UserId)
@@ -44,8 +64,8 @@ local function PlayerAdded(player)
 		profile:Reconcile() -- Fill in missing variables from ProfileTemplate (optional)
 		profile:ListenToRelease(function()
 			-- The profile could've been loaded on another Roblox server:
-			Masters[player].Replica:Destroy()
-			Masters[player] = nil
+			GetPlayerReplica(player):Destroy()
+			ServerData.PlayerDataMasters[player] = nil
 			player:Kick()
 		end)
 		if player:IsDescendantOf(Players) == true then
@@ -57,7 +77,7 @@ local function PlayerAdded(player)
 				Replication = "All",
 				WriteLib = PlayerWriteLib,
 			})
-			Masters[player] = { Profile = profile, Replica = replica }
+			ServerData.PlayerDataMasters[player] = { Profile = profile, Replica = replica }
 		else
 			-- Player left before the profile loaded:
 			profile:Release()
@@ -70,51 +90,75 @@ local function PlayerAdded(player)
 end
 
 local function SetPremiumCurrency(replica, amount)
-	replica:SetValue({ "PremiumCurrency" }, amount)
+	if replica then
+		replica:SetValue({ "PremiumCurrency" }, amount)
+	end
 end
 
 local function SetRebirths(replica, amount)
-	replica:SetValue({ "Rebirths" }, amount)
+	if replica then
+		replica:SetValue({ "Rebirths" }, amount)
+	end
 end
 
 local function SetPvpCurrency(replica, amount)
-	replica:SetValue({ "PvpCurrency" }, amount)
+	if replica then
+		replica:SetValue({ "PvpCurrency" }, amount)
+	end
 end
 
 local function SetDungeonRank(replica, amount)
-	replica:SetValue({ "DungeonRank" }, amount)
+	if replica then
+		replica:SetValue({ "DungeonRank" }, amount)
+	end
 end
 
 local function SetDungeonLevel(replica, level)
-	replica:SetValue({ "DungeonLevel" }, level)
+	if replica then
+		replica:SetValue({ "DungeonLevel" }, level)
+	end
 end
 
 local function SetRebirthPoints(replica, points)
-	replica:SetValue({ "RebirthPoints" }, points)
+	if replica then
+		replica:SetValue({ "RebirthPoints" }, points)
+	end
 end
 
 local function SetSpecialDrops(replica, specialDrop, amount)
-	replica:Write("SetSpecialDrops", specialDrop, amount)
+	if replica then
+		replica:Write("SetSpecialDrops", specialDrop, amount)
+	end
 end
 
 local function SetPets(replica, pet, amount)
-	replica:Write("SetPets", pet, amount)
+	if replica then
+		replica:Write("SetPets", pet, amount)
+	end
 end
 
 local function SetSkins(replica, value)
-	replica:ArrayInsert({ "Skins" }, value)
+	if replica then
+		replica:ArrayInsert({ "Skins" }, value)
+	end
 end
 
 local function SetSkills(replica, value)
-	replica:ArrayInsert({ "Skills" }, value)
+	if replica then
+		replica:ArrayInsert({ "Skills" }, value)
+	end
 end
 
 local function SetTransportation(replica, value)
-	replica:ArrayInsert({ "Transportation" }, value)
+	if replica then
+		replica:ArrayInsert({ "Transportation" }, value)
+	end
 end
 
 local function SetPowerUnit(replica, newPower)
-	replica:SetValue({ "PowerUnit" }, newPower)
+	if replica then
+		replica:SetValue({ "PowerUnit" }, newPower)
+	end
 end
 
 local function GetPowerUnitIncrement(premiumCurrency)
@@ -130,7 +174,7 @@ local function GetNewPowerUnit(premiumCurrency, oldPower)
 end
 
 local function SetPowerUnits()
-	for _, master in pairs(Masters) do
+	for _, master in pairs(ServerData.PlayerDataMasters) do
 		if master.Profile:IsActive() then
 			local replica = master.Replica
 			SetPowerUnit(replica, GetNewPowerUnit(replica.Data.PremiumCurrency, replica.Data.PowerUnit))
@@ -151,7 +195,7 @@ module.Init = function()
 	Players.PlayerAdded:Connect(PlayerAdded)
 
 	Players.PlayerRemoving:Connect(function(player)
-		local profile = Masters[player].Profile
+		local profile = GetPlayerProfile(player)
 		if profile ~= nil then
 			profile:Release()
 		end
@@ -166,5 +210,16 @@ module.Init = function()
 		end
 	end)
 end
+
+----- Signal Connections -----
+Signal["AwardPlayerPremiumCurrency"] = Signal.new()
+Signal["AwardPlayerPremiumCurrency"]:Connect(function(player, premiumCurrency)
+	local playerProfile = GetPlayerProfile(player)
+	if playerProfile then
+		local oldPremiumCurrency = playerProfile.Data.PremiumCurrency
+		local newPremiumCurrency = oldPremiumCurrency + premiumCurrency
+		SetPremiumCurrency(GetPlayerReplica(player), newPremiumCurrency)
+	end
+end)
 
 return module
