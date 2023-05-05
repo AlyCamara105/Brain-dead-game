@@ -14,19 +14,20 @@ local ServerData = require(ServerScriptService.Server.ServerData)
 local Signal = require(ReplicatedStorage.Shared.Signal)
 local SignalManager = require(ServerScriptService.Server.SignalManager)
 local RebirthInfo = require(ReplicatedStorage.Shared.RebirthInfo)
+local PowerModeInfo = require(ReplicatedStorage.Shared.PowerModeInfo)
 
 ----- Private Variables -----
 
 local Players = game:GetService("Players")
 local ProfileTemplate = {
 	PowerUnit = 0,
-	PremiumCurrency = 500,
+	PremiumCurrency = 0,
 	SpecialDrops = {},
 	Pets = {},
 	Rebirths = 0,
 	Skins = {},
 	Skills = {},
-	Boosts = { PowerUnitBoost = 100, PremiumCurrencyBoost = 0, DamageBoost = 100 },
+	Boosts = { PowerUnitBoost = 0, PremiumCurrencyBoost = 0, DamageBoost = 0 },
 	RebirthPoints = 0,
 	PvpCurrency = 0,
 	DungeonRank = 0,
@@ -80,7 +81,7 @@ end
 
 local function SetPowerModeLevel(replica, amount)
 	if replica then
-		replica:SetValue({ "PowerModeLevel", amount })
+		replica:SetValue({ "PowerModeLevel" }, amount)
 	end
 end
 
@@ -91,7 +92,7 @@ local function SetPremiumCurrency(replica, amount)
 end
 
 local function GetNewPremuimCurrency(oldPremiumCurrency, incrementPremiumCurrency, premiumCurrencyBoost)
-	return oldPremiumCurrency + (incrementPremiumCurrency * GetBoostMultiplier(premiumCurrencyBoost))
+	return oldPremiumCurrency + math.ceil(incrementPremiumCurrency * GetBoostMultiplier(premiumCurrencyBoost))
 end
 
 local function SetDamage(replica, amount)
@@ -101,7 +102,7 @@ local function SetDamage(replica, amount)
 end
 
 local function GetNewDamage(powerUnit, damageBoost)
-	return powerUnit * GetBoostMultiplier(damageBoost)
+	return math.ceil(powerUnit * GetBoostMultiplier(damageBoost))
 end
 
 local function SetPvpCurrency(replica, amount)
@@ -140,18 +141,10 @@ local function GetRebirthPointsIncrement()
 	return 1
 end
 
-local function GetNewRebirthPoints(oldRebirthPoints)
-	return oldRebirthPoints + GetRebirthPointsIncrement()
-end
-
 local function SetRebirthPoints(replica, points)
 	if replica then
 		replica:SetValue({ "RebirthPoints" }, points)
 	end
-end
-
-local function GetNewDamageBoost(oldDamageBoost, incrementDamageBoost)
-	return oldDamageBoost + incrementDamageBoost
 end
 
 local function SetDamageBoost(replica, amount)
@@ -160,18 +153,10 @@ local function SetDamageBoost(replica, amount)
 	end
 end
 
-local function GetNewPremiumCurrencyBoost(oldPremiumCurrencyBoost, incrementPremiumCurrencyBoost)
-	return oldPremiumCurrencyBoost + incrementPremiumCurrencyBoost
-end
-
 local function SetPremiumCurrencyBoost(replica, amount)
 	if replica then
 		replica:SetValue({ "Boosts", "PremiumCurrencyBoost" }, amount)
 	end
-end
-
-local function GetNewPowerUnitBoost(oldPowerUnitBoost, incrementPowerUnitBoost)
-	return oldPowerUnitBoost + incrementPowerUnitBoost
 end
 
 local function SetPowerUnitBoost(replica, amount)
@@ -225,7 +210,7 @@ local function GetNewPowerUnit(premiumCurrency, oldPower, powerUnitBoost)
 		Could optimize this by making the increment of power only update when the premium currency changes and having that increment
 		saved somewhere to be added to the oldPower here, ideally not in the datastore as it could easily be calculated.
 	]]
-	return oldPower + (GetPowerUnitIncrement(premiumCurrency) * GetBoostMultiplier(powerUnitBoost))
+	return oldPower + math.ceil(GetPowerUnitIncrement(premiumCurrency) * GetBoostMultiplier(powerUnitBoost))
 end
 
 local function SetPowerUnits()
@@ -248,15 +233,28 @@ local function ProcessRebirthRequest(playerReplica)
 		SetPremiumCurrency(playerReplica, 0)
 		SetPowerUnit(playerReplica, 0)
 		SetRebirths(playerReplica, GetNewRebirth(playerData.Rebirths))
-		SetRebirthPoints(playerReplica, GetNewRebirthPoints(playerData.RebirthPoints))
-		SetDamageBoost(
-			playerReplica,
-			GetNewDamageBoost(playerData.Boosts.DamageBoost, RebirthInfo.GetRebirthDamageBoost(playerData.Rebirths))
-		)
+		SetRebirthPoints(playerReplica, playerData.RebirthPoints + GetRebirthPointsIncrement())
+		SetDamageBoost(playerReplica, playerData.Boosts.DamageBoost + RebirthInfo.GetRebirthDamageBoost(playerData.Rebirths))
 		SetPowerUnitBoost(
 			playerReplica,
-			GetNewPowerUnitBoost(playerData.Boosts.PowerUnitBoost, RebirthInfo.GetRebirthPowerUnitBoost(playerData.Rebirths))
+			playerData.Boosts.PowerUnitBoost + RebirthInfo.GetRebirthPowerUnitBoost(playerData.Rebirths)
 		)
+	end
+end
+
+local function ProcessPowerUpRequest(playerReplica)
+	local playerData = playerReplica.Data
+	local oldPowerModeLevel = playerData.PowerModeLevel
+	local playerSpecialDrops = playerData.SpecialDrops
+	if PowerModeInfo.CanPowerUp(oldPowerModeLevel, playerSpecialDrops) then
+		local newPowerModeLevelInfo = PowerModeInfo.PowerModeLevels[oldPowerModeLevel + 1]
+
+		for drop, cost in pairs(newPowerModeLevelInfo.specialDrops) do
+			SetSpecialDrops(playerReplica, drop, playerSpecialDrops[drop] - cost)
+		end
+
+		SetPremiumCurrencyBoost(playerReplica, playerData.Boosts.PremiumCurrencyBoost + newPowerModeLevelInfo.PremiumCurrency)
+		SetPowerModeLevel(playerReplica, oldPowerModeLevel + 1)
 	end
 end
 
