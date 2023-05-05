@@ -26,6 +26,7 @@ end
 local function GetPlayerFromTags(itemTags)
 	for _, tag in ipairs(itemTags) do
 		if Players:FindFirstChild(tag) then
+			print("A player tag was found on the item!")
 			return Players[tag]
 		end
 	end
@@ -38,24 +39,35 @@ local function AddMobZone(mobPlaceholder, mobTag)
 	Mobs[mobTag] = { Zone = zone, MobPlaceholder = mobPlaceholder, MobStates = {} }
 
 	zone.itemEntered:Connect(function(item)
+		print("An Item entered one of the zones!")
 		local itemTags = CollectionService:GetTags(item)
 		local player = GetPlayerFromTags(itemTags)
 
 		if player then
-			-- Make the GetPlayerReplica and GetPlayerProfile public functions of the ServerData module
-			-- Make sure to check if the playerData exists
-			local playerData = ServerData.PlayerDataMasters[player].Profile.Data
-			local playerDamage = playerData.Damage
-			-- Make a function that gets the relevant mob data
-			local playerMobData = Mobs[mobTag].MobStates[player] or { Health = 100, PremiumCurrency = 10 }
+			local playerProfile = ServerData.GetPlayerProfile(player)
+			if playerProfile then
+				print("The player's profile exists!")
+				local playerDamage = playerProfile.Data.Damage
+				local playerMobData = Mobs[mobTag].MobStates[player]
 
-			local newMobHealth = playerMobData.Health - playerDamage
-			if newMobHealth <= 0 then
-				SignalManager["AwardPlayerPremiumCurrency"]:Fire(player, playerMobData.PremiumCurrency)
-				-- Send the client an event for feedback
-			else
-				playerMobData.Health = newMobHealth
-				-- Send the client an event for feedback
+				if not playerMobData then
+					-- Make a function that gets the relevant mob data
+					Mobs[mobTag].MobStates[player] = { Health = 100, PremiumCurrency = 10 }
+					playerMobData = Mobs[mobTag].MobStates[player]
+				end
+
+				local newMobHealth = playerMobData.Health - playerDamage
+				if newMobHealth <= 0 then
+					print("The player killed the mob!")
+					-- Make a function that gets the relevant mob data
+					playerMobData.Health = 100
+					SignalManager["AwardPlayerPremiumCurrency"]:Fire(player, playerMobData.PremiumCurrency)
+					-- Send the client an event for feedback
+				else
+					print("The player damaged the mob!")
+					playerMobData.Health = newMobHealth
+					-- Send the client an event for feedback
+				end
 			end
 		end
 	end)
@@ -85,6 +97,18 @@ module.Init = function()
 	local mobsFolder = game.Workspace.Map.Mobs
 
 	InitializeMobs(mobsFolder)
+
+	-- Hit detection test
+	--[[
+		local part = Instance.new("Part")
+	part.Position = game.Workspace.Map.Areas.Area1.SpawnLocation.Position + Vector3.new(0,3,0)
+	CollectionService:AddTag(part, "7heM1ghtyOn3")
+	part.Parent = workspace
+
+	for _, mobData in pairs(Mobs) do
+		mobData.Zone:trackItem(part)
+	end
+	--]]
 end
 
 ----- Signal Connections -----

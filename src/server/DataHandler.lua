@@ -31,6 +31,7 @@ local ProfileTemplate = {
 	DungeonRank = 0,
 	DungeionLevel = 0,
 	Transportation = {},
+	Damage = 50,
 }
 local ProfileStore = ProfileService.GetProfileStore("PlayerData", ProfileTemplate)
 local PlayerWriteLib = ReplicatedStorage.Shared.PlayerWriteLib
@@ -39,24 +40,6 @@ local Ceil = math.ceil
 
 ----- Private Functions -----
 
-local function GetPlayerReplica(player)
-	local replica = nil
-	local playerMasterData = ServerData.PlayerDataMasters[player]
-	if playerMasterData then
-		replica = playerMasterData.Replica
-	end
-	return replica
-end
-
-local function GetPlayerProfile(player)
-	local profile = nil
-	local playerMasterData = ServerData.PlayerDataMasters[player]
-	if playerMasterData then
-		profile = playerMasterData.Profile
-	end
-	return profile
-end
-
 local function PlayerAdded(player)
 	local profile = ProfileStore:LoadProfileAsync("Player_" .. player.UserId)
 	if profile ~= nil then
@@ -64,7 +47,7 @@ local function PlayerAdded(player)
 		profile:Reconcile() -- Fill in missing variables from ProfileTemplate (optional)
 		profile:ListenToRelease(function()
 			-- The profile could've been loaded on another Roblox server:
-			GetPlayerReplica(player):Destroy()
+			ServerData.GetPlayerReplica(player):Destroy()
 			ServerData.PlayerDataMasters[player] = nil
 			player:Kick()
 		end)
@@ -94,6 +77,8 @@ local function SetPremiumCurrency(replica, amount)
 		replica:SetValue({ "PremiumCurrency" }, amount)
 	end
 end
+
+-- Add a set damage function
 
 local function SetRebirths(replica, amount)
 	if replica then
@@ -195,7 +180,7 @@ module.Init = function()
 	Players.PlayerAdded:Connect(PlayerAdded)
 
 	Players.PlayerRemoving:Connect(function(player)
-		local profile = GetPlayerProfile(player)
+		local profile = ServerData.GetPlayerProfile(player)
 		if profile ~= nil then
 			profile:Release()
 		end
@@ -212,13 +197,15 @@ module.Init = function()
 end
 
 ----- Signal Connections -----
-Signal["AwardPlayerPremiumCurrency"] = Signal.new()
-Signal["AwardPlayerPremiumCurrency"]:Connect(function(player, premiumCurrency)
-	local playerProfile = GetPlayerProfile(player)
+SignalManager["AwardPlayerPremiumCurrency"] = Signal.new()
+SignalManager["AwardPlayerPremiumCurrency"]:Connect(function(player, premiumCurrency)
+	print("Received an event to update a player's premium currency")
+	local playerProfile = ServerData.GetPlayerProfile(player)
 	if playerProfile then
+		print("The player's profile exists!")
 		local oldPremiumCurrency = playerProfile.Data.PremiumCurrency
 		local newPremiumCurrency = oldPremiumCurrency + premiumCurrency
-		SetPremiumCurrency(GetPlayerReplica(player), newPremiumCurrency)
+		SetPremiumCurrency(ServerData.GetPlayerReplica(player), newPremiumCurrency)
 	end
 end)
 
