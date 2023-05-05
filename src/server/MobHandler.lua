@@ -12,6 +12,7 @@ local SignalManager = require(ServerScriptService.Server.SignalManager)
 
 local Zone = require(ReplicatedStorage.Shared.Zone)
 local ServerData = require(ServerScriptService.Server.ServerData)
+local MobInfo = require(ReplicatedStorage.Shared.MobInfo)
 
 ----- Private Variables -----
 
@@ -51,16 +52,14 @@ local function AddMobZone(mobPlaceholder, mobTag)
 				local playerMobData = Mobs[mobTag].MobStates[player]
 
 				if not playerMobData then
-					-- Make a function that gets the relevant mob data
-					Mobs[mobTag].MobStates[player] = { Health = 100, PremiumCurrency = 10 }
+					Mobs[mobTag].MobStates[player] = MobInfo.GetMobInfo(mobTag)
 					playerMobData = Mobs[mobTag].MobStates[player]
 				end
 
 				local newMobHealth = playerMobData.Health - playerDamage
 				if newMobHealth <= 0 then
 					print("The player killed the mob!")
-					-- Make a function that gets the relevant mob data
-					playerMobData.Health = 100
+					playerMobData.Health = MobInfo.GetMobInfo(mobTag).Health
 					SignalManager["AwardPlayerPremiumCurrency"]:Fire(player, playerMobData.PremiumCurrency)
 					-- Send the client an event for feedback
 				else
