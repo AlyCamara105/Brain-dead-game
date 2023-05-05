@@ -6,7 +6,6 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 local Players = game:GetService("Players")
-local Signal = require(ReplicatedStorage.Shared.Signal)
 local SignalManager = require(ServerScriptService.Server.SignalManager)
 
 ----- Loaded Modules -----
@@ -43,9 +42,12 @@ local function AddMobZone(mobPlaceholder, mobTag)
 		local player = GetPlayerFromTags(itemTags)
 
 		if player then
+			-- Make the GetPlayerReplica and GetPlayerProfile public functions of the ServerData module
+			-- Make sure to check if the playerData exists
 			local playerData = ServerData.PlayerDataMasters[player].Profile.Data
 			local playerDamage = playerData.Damage
-			local playerMobData = Mobs[mobTag].MobStates[player] or {Health = 100, PremiumCurrency = 10} -- Make a function that gets the relevant mob data
+			-- Make a function that gets the relevant mob data
+			local playerMobData = Mobs[mobTag].MobStates[player] or { Health = 100, PremiumCurrency = 10 }
 
 			local newMobHealth = playerMobData.Health - playerDamage
 			if newMobHealth <= 0 then
