@@ -13,6 +13,7 @@ local ReplicaService = require(ServerScriptService.Server.ReplicaService)
 local ServerData = require(ServerScriptService.Server.ServerData)
 local Signal = require(ReplicatedStorage.Shared.Signal)
 local SignalManager = require(ServerScriptService.Server.SignalManager)
+local RebirthInfo = require(ReplicatedStorage.Shared.RebirthInfo)
 
 ----- Private Variables -----
 
@@ -32,6 +33,7 @@ local ProfileTemplate = {
 	DungeionLevel = 0,
 	Transportation = {},
 	Damage = 50,
+	PowerModeLevel = 0,
 }
 local ProfileStore = ProfileService.GetProfileStore("PlayerData", ProfileTemplate)
 local PlayerWriteLib = ReplicatedStorage.Shared.PlayerWriteLib
@@ -72,9 +74,24 @@ local function PlayerAdded(player)
 	end
 end
 
+local function SetPowerModeLevel(replica, amount)
+	if replica then
+		replica:SetValue({ "PowerModeLevel", amount })
+	end
+end
+
 local function SetPremiumCurrency(replica, amount)
 	if replica then
 		replica:SetValue({ "PremiumCurrency" }, amount)
+	end
+end
+
+local function GivePremiumCurrency(player, premiumCurrency)
+	local playerProfile = ServerData.GetPlayerProfile(player)
+	if playerProfile then
+		local oldPremiumCurrency = playerProfile.Data.PremiumCurrency
+		local newPremiumCurrency = oldPremiumCurrency + premiumCurrency
+		SetPremiumCurrency(ServerData.GetPlayerReplica(player), newPremiumCurrency)
 	end
 end
 
@@ -82,6 +99,14 @@ local function SetDamage(replica, amount)
 	if replica then
 		replica:SetValue({ "Damage" }, amount)
 	end
+end
+
+local function GetRebirthsIncrement()
+	return 1
+end
+
+local function GetNewRebirth(oldRebirth)
+	return oldRebirth + GetRebirthsIncrement()
 end
 
 local function SetRebirths(replica, amount)
@@ -106,6 +131,14 @@ local function SetDungeonLevel(replica, level)
 	if replica then
 		replica:SetValue({ "DungeonLevel" }, level)
 	end
+end
+
+local function GetRebirthPointsIncrement()
+	return 1
+end
+
+local function GetNewRebirthPoints(oldRebirthPoints)
+	return oldRebirthPoints + GetRebirthPointsIncrement()
 end
 
 local function SetRebirthPoints(replica, points)
@@ -147,6 +180,23 @@ end
 local function SetPowerUnit(replica, newPower)
 	if replica then
 		replica:SetValue({ "PowerUnit" }, newPower)
+	end
+end
+
+local function ProcessRebirthRequest(player)
+	local playerProfile = ServerData.GetPlayerProfile(player)
+	if playerProfile then
+		local playerData = playerProfile.Data
+		if RebirthInfo.CanRebirth(playerData.Rebirths, playerData.premiumCurrency) then
+			local playerReplica = ServerData.GetPlayerReplica(player)
+			if playerReplica then
+				SetPremiumCurrency(playerReplica, 0)
+				SetPowerUnit(playerReplica, 0)
+				SetRebirths(playerReplica, GetNewRebirth(playerData.Rebirths))
+				SetRebirthPoints(playerReplica, GetNewRebirthPoints())
+				-- Increase damage, and power unit boost
+			end
+		end
 	end
 end
 
@@ -201,16 +251,9 @@ module.Init = function()
 end
 
 ----- Signal Connections -----
-SignalManager["AwardPlayerPremiumCurrency"] = Signal.new()
-SignalManager["AwardPlayerPremiumCurrency"]:Connect(function(player, premiumCurrency)
-	print("Received an event to update a player's premium currency")
-	local playerProfile = ServerData.GetPlayerProfile(player)
-	if playerProfile then
-		print("The player's profile exists!")
-		local oldPremiumCurrency = playerProfile.Data.PremiumCurrency
-		local newPremiumCurrency = oldPremiumCurrency + premiumCurrency
-		SetPremiumCurrency(ServerData.GetPlayerReplica(player), newPremiumCurrency)
-	end
+SignalManager["GivePremiumCurrency"] = Signal.new()
+SignalManager["GivePremiumCurrency"]:Connect(function(player, premiumCurrency)
+	GivePremiumCurrency(player, premiumCurrency)
 end)
 
 return module

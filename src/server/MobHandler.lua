@@ -27,7 +27,6 @@ end
 local function GetPlayerFromTags(itemTags)
 	for _, tag in ipairs(itemTags) do
 		if Players:FindFirstChild(tag) then
-			print("A player tag was found on the item!")
 			return Players[tag]
 		end
 	end
@@ -40,14 +39,12 @@ local function AddMobZone(mobPlaceholder, mobTag)
 	Mobs[mobTag] = { Zone = zone, MobPlaceholder = mobPlaceholder, MobStates = {} }
 
 	zone.itemEntered:Connect(function(item)
-		print("An Item entered one of the zones!")
 		local itemTags = CollectionService:GetTags(item)
 		local player = GetPlayerFromTags(itemTags)
 
 		if player then
 			local playerProfile = ServerData.GetPlayerProfile(player)
 			if playerProfile then
-				print("The player's profile exists!")
 				local playerDamage = playerProfile.Data.Damage
 				local playerMobData = Mobs[mobTag].MobStates[player]
 
@@ -58,12 +55,10 @@ local function AddMobZone(mobPlaceholder, mobTag)
 
 				local newMobHealth = playerMobData.Health - playerDamage
 				if newMobHealth <= 0 then
-					print("The player killed the mob!")
 					playerMobData.Health = MobInfo.GetMobInfo(mobTag).Health
-					SignalManager["AwardPlayerPremiumCurrency"]:Fire(player, playerMobData.PremiumCurrency)
+					SignalManager["GivePremiumCurrency"]:Fire(player, playerMobData.PremiumCurrency)
 					-- Send the client an event for feedback
 				else
-					print("The player damaged the mob!")
 					playerMobData.Health = newMobHealth
 					-- Send the client an event for feedback
 				end

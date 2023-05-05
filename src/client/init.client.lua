@@ -23,6 +23,10 @@ ReplicaController.ReplicaOfClassCreated(Player.Name .. Player.UserId, function(r
 	replica:ListenToArrayInsert({ "Skins" }, function(newIndex, newValue) end)
 	replica:ListenToArrayInsert({ "Skills" }, function(newIndex, newValue) end)
 	replica:ListenToArrayInsert({ "Transportation" }, function(newIndex, newValue) end)
+	replica:ListenToChange({ "PowerModeLevel" }, function(newPowerModeLevel, oldPowerModeLevel) end)
+	replica:ListenToChange({ "Boosts", "PowerUnitBoost" }, function(newPowerUnitBoost, oldPowerUnitBoost) end)
+	replica:ListenToChange({ "Boosts", "PremiumCurrencyBoost" }, function(newPremiumCurrencyBoost, oldPremiumCurrencyBoost) end)
+	replica:ListenToChange({ "Boosts", "DamageBoost" }, function(newDamageBoost, oldDamageBoost) end)
 end)
 
 ReplicaController.RequestData()
