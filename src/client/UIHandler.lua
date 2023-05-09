@@ -18,7 +18,8 @@ local Player = Players.LocalPlayer
 module.Init = function()
     local UI = Roact.createElement("ScreenGui", {}, {
         Frame = Roact.createElement("Frame", {
-            Size = UDim2.new(0, 200, 0, 300)
+            Size = UDim2.new(0, 200, 0, 300),
+            Visible = false
         })
     })
 

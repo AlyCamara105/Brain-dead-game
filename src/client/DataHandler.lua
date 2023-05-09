@@ -18,7 +18,9 @@ local Player = Players.LocalPlayer
 ----- Initialize -----
 module.Init = function()
     ReplicaController.ReplicaOfClassCreated(Player.Name .. Player.UserId, function(replica)
-        replica:ListenToChange({ "PowerUnit" }, function(newPower, oldPower) end)
+        replica:ListenToChange({ "PowerUnit" }, function(newPower, oldPower) 
+            print(Player.Name.."'s power unit data was update to: "..newPower.." from: "..oldPower)
+        end)
         replica:ListenToChange({ "PremiumCurrency" }, function(newAmount, oldAmount) end)
         replica:ListenToChange({ "Rebirths" }, function(newAmount, oldAmount) end)
         replica:ListenToChange({ "PvpCurrency" }, function(newAmount, oldAmount) end)
