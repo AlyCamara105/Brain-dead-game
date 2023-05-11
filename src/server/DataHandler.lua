@@ -15,6 +15,7 @@ local Signal = require(ReplicatedStorage.Shared.Signal)
 local SignalManager = require(ServerScriptService.Server.SignalManager)
 local RebirthInfo = require(ReplicatedStorage.Shared.RebirthInfo)
 local PowerModeInfo = require(ReplicatedStorage.Shared.PowerModeInfo)
+local PetsInfo = require(ReplicatedStorage.Shared.PetsInfo)
 
 ----- Private Variables -----
 
@@ -23,7 +24,7 @@ local ProfileTemplate = {
 	PowerUnit = 0,
 	PremiumCurrency = 0,
 	SpecialDrops = {},
-	Pets = {},
+	Pets = { Bunny = 3 },
 	Rebirths = 0,
 	Skins = {},
 	Skills = {},
@@ -35,6 +36,9 @@ local ProfileTemplate = {
 	Transportation = {},
 	Damage = 0,
 	PowerModeLevel = 0,
+	EquippedPets = { "Bunny", "Bunny" },
+	MaxPets = 25,
+	MaxEquippedPets = 4,
 }
 local ProfileStore = ProfileService.GetProfileStore("PlayerData", ProfileTemplate)
 local PlayerWriteLib = ReplicatedStorage.Shared.PlayerWriteLib
@@ -171,29 +175,53 @@ local function SetSpecialDrops(replica, specialDrop, amount)
 	end
 end
 
---[[local function SetPets(replica, pet, amount)
+local function AddEquippedPet(replica, pet)
+	if replica then
+		replica:ArrayInsert("EquippedPets", pet)
+	end
+end
+
+local function RemoveEquippedPet(replica, pet)
+	if replica then
+		local petIndex = table.find(replica.Data.EquippedPets, pet)
+		replica:ArrayRemove("EquippedPets", petIndex)
+	end
+end
+
+local function SetPets(replica, pet, amount)
 	if replica then
 		replica:Write("SetPets", pet, amount)
 	end
 end
 
-local function SetSkins(replica, value)
+local function AddPet(replica, pet, amount)
+	if replica then
+		local oldPetAmount = replica.Data.Pets[pet]
+		if oldPetAmount then
+			SetPets(replica, pet, oldPetAmount + amount)
+		else
+			SetPets(replica, pet, amount)
+		end
+	end
+end
+
+local function AddSkins(replica, value)
 	if replica then
 		replica:ArrayInsert({ "Skins" }, value)
 	end
 end
 
-local function SetSkills(replica, value)
+local function AddSkills(replica, value)
 	if replica then
 		replica:ArrayInsert({ "Skills" }, value)
 	end
 end
 
-local function SetTransportation(replica, value)
+local function AddTransportation(replica, value)
 	if replica then
 		replica:ArrayInsert({ "Transportation" }, value)
 	end
-end]]
+end
 
 local function SetPowerUnit(replica, newPower)
 	if replica then
@@ -206,55 +234,112 @@ local function GetPowerUnitIncrement(premiumCurrency)
 end
 
 local function GetNewPowerUnit(premiumCurrency, oldPower, powerUnitBoost)
-	--[[
-		Could optimize this by making the increment of power only update when the premium currency changes and having that increment
-		saved somewhere to be added to the oldPower here, ideally not in the datastore as it could easily be calculated.
-	]]
 	return oldPower + math.ceil(GetPowerUnitIncrement(premiumCurrency) * GetBoostMultiplier(powerUnitBoost))
 end
 
-local function SetPowerUnits()
-	for _, master in pairs(ServerData.PlayerDataMasters) do
-		if master.Profile:IsActive() then
-			local replica = master.Replica
-			local playerData = replica.Data
-			SetPowerUnit(
-				replica,
-				GetNewPowerUnit(playerData.PremiumCurrency, playerData.PowerUnit, playerData.Boosts.PowerUnitBoost)
-			)
-			SetDamage(replica, GetNewDamage(playerData.PowerUnit, playerData.Boosts.DamageBoost))
-		end
-	end
-end
-
-local function ProcessRebirthRequest(playerReplica)
-	local playerData = playerReplica.Data
+local function ProcessRebirthRequest(replica)
+	local playerData = replica.Data
 	if RebirthInfo.CanRebirth(playerData.Rebirths, playerData.PremiumCurrency) then
-		SetPremiumCurrency(playerReplica, 0)
-		SetPowerUnit(playerReplica, 0)
-		SetRebirths(playerReplica, GetNewRebirth(playerData.Rebirths))
-		SetRebirthPoints(playerReplica, playerData.RebirthPoints + GetRebirthPointsIncrement())
-		SetDamageBoost(playerReplica, playerData.Boosts.DamageBoost + RebirthInfo.GetRebirthDamageBoost(playerData.Rebirths))
-		SetPowerUnitBoost(
-			playerReplica,
-			playerData.Boosts.PowerUnitBoost + RebirthInfo.GetRebirthPowerUnitBoost(playerData.Rebirths)
-		)
+		SetPremiumCurrency(replica, 0)
+		SetPowerUnit(replica, 0)
+		SetRebirths(replica, GetNewRebirth(playerData.Rebirths))
+		SetRebirthPoints(replica, playerData.RebirthPoints + GetRebirthPointsIncrement())
+		SetDamageBoost(replica, playerData.Boosts.DamageBoost + RebirthInfo.GetRebirthDamageBoost(playerData.Rebirths))
+		SetPowerUnitBoost(replica, playerData.Boosts.PowerUnitBoost + RebirthInfo.GetRebirthPowerUnitBoost(playerData.Rebirths))
 	end
 end
 
-local function ProcessPowerUpRequest(playerReplica)
-	local playerData = playerReplica.Data
+local function ProcessPowerUpRequest(replica)
+	local playerData = replica.Data
 	local oldPowerModeLevel = playerData.PowerModeLevel
 	local playerSpecialDrops = playerData.SpecialDrops
 	if PowerModeInfo.CanPowerUp(oldPowerModeLevel, playerSpecialDrops) then
 		local newPowerModeLevelInfo = PowerModeInfo.PowerModeLevels[oldPowerModeLevel + 1]
 
 		for drop, cost in pairs(newPowerModeLevelInfo.specialDrops) do
-			SetSpecialDrops(playerReplica, drop, playerSpecialDrops[drop] - cost)
+			SetSpecialDrops(replica, drop, playerSpecialDrops[drop] - cost)
 		end
 
-		SetPremiumCurrencyBoost(playerReplica, playerData.Boosts.PremiumCurrencyBoost + newPowerModeLevelInfo.PremiumCurrency)
-		SetPowerModeLevel(playerReplica, oldPowerModeLevel + 1)
+		SetPremiumCurrencyBoost(replica, playerData.Boosts.PremiumCurrencyBoost + newPowerModeLevelInfo.PremiumCurrency)
+		SetPowerModeLevel(replica, oldPowerModeLevel + 1)
+	end
+end
+
+local function HasPet(pets, pet)
+	return pets[pet] and pets[pet] > 0
+end
+
+local function ProcessEquipPetRequest(replica, pet)
+	local data = replica.Data
+	local pets = data.Pets
+	if HasPet(pets, pet) then
+		local equippedPets = data.EquippedPets
+		local equippedPetsCount = {}
+		if #equippedPets < data.MaxEquippedPets then
+			for _, equippedPet in ipairs(equippedPets) do
+				if equippedPetsCount[equippedPet] then
+					equippedPetsCount[equippedPet] += 1
+				else
+					equippedPetsCount[equippedPet] = 1
+				end
+			end
+			if equippedPetsCount[pet] < pets[pet] then
+				AddEquippedPet(replica, pet)
+			end
+		end
+	end
+end
+
+local function ProcessUnequipPetRequest(replica, pet)
+	local data = replica.Data
+	local pets = data.Pets
+	if HasPet(pets, pet) then
+		if table.find(data.EquippedPets, pet) then
+			RemoveEquippedPet(replica, pet)
+		end
+	end
+end
+
+local function ProcessDeletePetsRequest(replica, petsToDelete)
+	local data = replica.Data
+	local pets = data.Pets
+	for _, pet in ipairs(petsToDelete) do
+		if HasPet(pets, pet) then
+			if table.find(data.EquippedPets, pet) then
+				RemoveEquippedPet(replica, pet)
+			end
+			SetPets(replica, pet, pets[pet] - 1)
+		end
+	end
+end
+
+local function ProcessFusePetRequest(replica, pet)
+	local data = replica
+	local playerPets = data.Pets
+	if HasPet(playerPets, pet) then
+		local amountOfPet = playerPets[pet]
+		if PetsInfo.CanFuse(pet, amountOfPet) then
+			local pets = PetsInfo.Pets
+			local petInfo = pets[pet]
+			local fuseCost = petInfo.FuseCost
+			if fuseCost == amountOfPet and table.find(data.EquippedPets, pet) then
+				RemoveEquippedPet(replica, pet)
+			end
+			SetPets(replica, pet, amountOfPet - fuseCost)
+			AddPet(replica, petInfo.Fusion, 1)
+		end
+	end
+end
+
+local function SetPowerUnits()
+	for _, master in pairs(ServerData.PlayerDataMasters) do
+		if master.Profile:IsActive() then
+			local replica = master.Replica
+			local data = replica.Data
+			SetPowerUnit(replica, GetNewPowerUnit(data.PremiumCurrency, data.PowerUnit, data.Boosts.PowerUnitBoost))
+			SetDamage(replica, GetNewDamage(data.PowerUnit, data.Boosts.DamageBoost))
+			ProcessEquipPetRequest(replica, "Bunny")
+		end
 	end
 end
 
