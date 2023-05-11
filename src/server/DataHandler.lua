@@ -24,9 +24,9 @@ local ProfileTemplate = {
 	PowerUnit = 0,
 	PremiumCurrency = 0,
 	SpecialDrops = {},
-	Pets = { Bunny = 10 },
+	Pets = { Bunny = 1 },
 	Rebirths = 0,
-	Skins = {},
+	Costumes = {},
 	Skills = {},
 	Boosts = { PowerUnitBoost = 0, PremiumCurrencyBoost = 0, DamageBoost = 0 },
 	RebirthPoints = 0,
@@ -36,7 +36,7 @@ local ProfileTemplate = {
 	Transportation = {},
 	Damage = 0,
 	PowerModeLevel = 0,
-	EquippedPets = { "Bunny", "Bunny", "Bunny" },
+	EquippedPets = {},
 	MaxPets = 25,
 	MaxEquippedPets = 4,
 }
@@ -175,12 +175,6 @@ local function SetSpecialDrops(replica, specialDrop, amount)
 	end
 end
 
-local function AddEquippedPet(replica, pet)
-	if replica then
-		replica:ArrayInsert("EquippedPets", pet)
-	end
-end
-
 local function GetPetCount(pets)
 	local count = {}
 	for _, pet in ipairs(pets) do
@@ -198,6 +192,7 @@ local function RemoveEquippedPet(replica, pet, amount)
 		local function _removeEquippedPet()
 			local petIndex = table.find(replica.Data.EquippedPets, pet)
 			replica:ArrayRemove("EquippedPets", petIndex)
+			SetDamageBoost(replica, replica.Data.Boosts.DamageBoost - PetsInfo.Pets[pet].DamageBoost)
 		end
 		if amount == math.huge then
 			local petCount = GetPetCount(replica.Data.EquippedPets)
@@ -209,6 +204,13 @@ local function RemoveEquippedPet(replica, pet, amount)
 				_removeEquippedPet()
 			end
 		end
+	end
+end
+
+local function EquipPet(replica, pet)
+	if replica then
+		replica:ArrayInsert("EquippedPets", pet)
+		SetDamageBoost(replica, replica.Data.Boosts.DamageBoost + PetsInfo.Pets[pet].DamageBoost)
 	end
 end
 
@@ -229,9 +231,9 @@ local function AddPet(replica, pet, amount)
 	end
 end
 
-local function AddSkins(replica, value)
+local function AddCostumes(replica, value)
 	if replica then
-		replica:ArrayInsert({ "Skins" }, value)
+		replica:ArrayInsert({ "Costumes" }, value)
 	end
 end
 
@@ -299,8 +301,9 @@ local function ProcessEquipPetRequest(replica, pet)
 	if HasPet(pets, pet) then
 		local equippedPets = data.EquippedPets
 		if #equippedPets < data.MaxEquippedPets then
-			if GetPetCount(equippedPets)[pet] < pets[pet] then
-				AddEquippedPet(replica, pet)
+			local equippedPetCount = GetPetCount(equippedPets)[pet] or 0
+			if equippedPetCount < pets[pet] then
+				EquipPet(replica, pet)
 			end
 		end
 	end
