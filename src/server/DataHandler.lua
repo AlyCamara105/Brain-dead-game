@@ -24,7 +24,7 @@ local ProfileTemplate = {
 	PowerUnit = 0,
 	PremiumCurrency = 0,
 	SpecialDrops = {},
-	Pets = { Bunny = 3 },
+	Pets = { Bunny = 1 },
 	Rebirths = 0,
 	Skins = {},
 	Skills = {},
@@ -36,7 +36,7 @@ local ProfileTemplate = {
 	Transportation = {},
 	Damage = 0,
 	PowerModeLevel = 0,
-	EquippedPets = { "Bunny", "Bunny" },
+	EquippedPets = { "Bunny" },
 	MaxPets = 25,
 	MaxEquippedPets = 4,
 }
@@ -181,10 +181,34 @@ local function AddEquippedPet(replica, pet)
 	end
 end
 
-local function RemoveEquippedPet(replica, pet)
+local function GetPetCount(pets)
+	local count = {}
+	for _, pet in ipairs(pets) do
+		if count[pet] then
+			count[pet] += 1
+		else
+			count[pet] = 1
+		end
+	end
+	return count
+end
+
+local function RemoveEquippedPet(replica, pet, amount)
 	if replica then
-		local petIndex = table.find(replica.Data.EquippedPets, pet)
-		replica:ArrayRemove("EquippedPets", petIndex)
+		local function _removeEquippedPet()
+			local petIndex = table.find(replica.Data.EquippedPets, pet)
+			replica:ArrayRemove("EquippedPets", petIndex)
+		end
+		if amount == math.huge then
+			local petCount = GetPetCount(replica.Data.EquippedPets)
+			for _ = 0, 1, petCount[pet] do
+				_removeEquippedPet()
+			end
+		else
+			for _ = 0, 1, amount do
+				_removeEquippedPet()
+			end
+		end
 	end
 end
 
@@ -274,16 +298,8 @@ local function ProcessEquipPetRequest(replica, pet)
 	local pets = data.Pets
 	if HasPet(pets, pet) then
 		local equippedPets = data.EquippedPets
-		local equippedPetsCount = {}
 		if #equippedPets < data.MaxEquippedPets then
-			for _, equippedPet in ipairs(equippedPets) do
-				if equippedPetsCount[equippedPet] then
-					equippedPetsCount[equippedPet] += 1
-				else
-					equippedPetsCount[equippedPet] = 1
-				end
-			end
-			if equippedPetsCount[pet] < pets[pet] then
+			if GetPetCount(equippedPets)[pet] < pets[pet] then
 				AddEquippedPet(replica, pet)
 			end
 		end
@@ -295,7 +311,7 @@ local function ProcessUnequipPetRequest(replica, pet)
 	local pets = data.Pets
 	if HasPet(pets, pet) then
 		if table.find(data.EquippedPets, pet) then
-			RemoveEquippedPet(replica, pet)
+			RemoveEquippedPet(replica, pet, 1)
 		end
 	end
 end
@@ -303,12 +319,14 @@ end
 local function ProcessDeletePetsRequest(replica, petsToDelete)
 	local data = replica.Data
 	local pets = data.Pets
-	for _, pet in ipairs(petsToDelete) do
+	for pet, amountToDelete in pairs(petsToDelete) do
 		if HasPet(pets, pet) then
-			if table.find(data.EquippedPets, pet) then
-				RemoveEquippedPet(replica, pet)
+			local petAmount = pets[pet]
+			amountToDelete = math.clamp(amountToDelete, 0, petAmount)
+			if amountToDelete == petAmount and table.find(data.EquippedPets, pet) then
+				RemoveEquippedPet(replica, pet, math.huge)
 			end
-			SetPets(replica, pet, pets[pet] - 1)
+			SetPets(replica, pet, petAmount - amountToDelete)
 		end
 	end
 end
@@ -323,7 +341,7 @@ local function ProcessFusePetRequest(replica, pet)
 			local petInfo = pets[pet]
 			local fuseCost = petInfo.FuseCost
 			if fuseCost == amountOfPet and table.find(data.EquippedPets, pet) then
-				RemoveEquippedPet(replica, pet)
+				RemoveEquippedPet(replica, pet, math.huge)
 			end
 			SetPets(replica, pet, amountOfPet - fuseCost)
 			AddPet(replica, petInfo.Fusion, 1)
@@ -338,7 +356,6 @@ local function SetPowerUnits()
 			local data = replica.Data
 			SetPowerUnit(replica, GetNewPowerUnit(data.PremiumCurrency, data.PowerUnit, data.Boosts.PowerUnitBoost))
 			SetDamage(replica, GetNewDamage(data.PowerUnit, data.Boosts.DamageBoost))
-			ProcessUnequipPetRequest(replica, "Bunny")
 		end
 	end
 end
