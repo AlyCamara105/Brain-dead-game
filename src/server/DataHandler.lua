@@ -16,13 +16,14 @@ local SignalManager = require(ServerScriptService.Server.SignalManager)
 local RebirthInfo = require(ReplicatedStorage.Shared.RebirthInfo)
 local PowerModeInfo = require(ReplicatedStorage.Shared.PowerModeInfo)
 local PetsInfo = require(ReplicatedStorage.Shared.PetsInfo)
+local CostumesInfo = require(ReplicatedStorage.Shared.CostumesInfo)
 
 ----- Private Variables -----
 
 local Players = game:GetService("Players")
 local ProfileTemplate = {
 	PowerUnit = 0,
-	PremiumCurrency = 0,
+	PremiumCurrency = 10000,
 	SpecialDrops = {},
 	Pets = {},
 	Rebirths = 0,
@@ -265,7 +266,7 @@ local function AddPet(replica, pet, amount)
 	end
 end
 
-local function AddCostumes(replica, value)
+local function AddCostume(replica, value)
 	if replica then
 		replica:ArrayInsert({ "Costumes" }, value)
 	end
@@ -320,7 +321,7 @@ local function ProcessPowerUpRequest(replica)
 			SetSpecialDrops(replica, drop, playerSpecialDrops[drop] - cost)
 		end
 
-		SetPremiumCurrencyBoost(replica, playerData.Boosts.PremiumCurrencyBoost + newPowerModeLevelInfo.PremiumCurrency)
+		SetPremiumCurrencyBoost(replica, playerData.Boosts.PremiumCurrencyBoost + newPowerModeLevelInfo.PremiumCurrencyBoost)
 		SetPowerModeLevel(replica, oldPowerModeLevel + 1)
 	end
 end
@@ -423,6 +424,17 @@ local function ProcessPetSlotRebirthPointsRequest(replica)
 	end
 end
 
+local function ProcessBuyCostumeRequest(replica, costume)
+	local data = replica.Data
+	local oldPremiumCurrency = data.PremiumCurrency
+	if not table.find(data.Costumes, costume) and CostumesInfo.CanBuyCostume(costume, data.Rebirths, oldPremiumCurrency) then
+		SetPremiumCurrency(replica, oldPremiumCurrency - CostumesInfo.Costumes[costume].Cost)
+		AddCostume(replica, costume)
+		print(replica.Data.Costumes)
+		print(replica.Data.PremiumCurrency)
+	end
+end
+
 local function SetPowerUnits()
 	for _, master in pairs(ServerData.PlayerDataMasters) do
 		if master.Profile:IsActive() then
@@ -430,6 +442,7 @@ local function SetPowerUnits()
 			local data = replica.Data
 			SetPowerUnit(replica, GetNewPowerUnit(data.PremiumCurrency, data.PowerUnit, data.Boosts.PowerUnitBoost))
 			SetDamage(replica, GetNewDamage(data.PowerUnit, data.Boosts.DamageBoost))
+			ProcessBuyCostumeRequest(replica, "Luffy")
 		end
 	end
 end

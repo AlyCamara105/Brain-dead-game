@@ -3,7 +3,7 @@ local module = {}
 ----- Public Variables -----
 
 module.PowerModeLevels = {
-	{ specialDrops = { Ball = 1 }, PremiumCurrency = 20 },
+	{ specialDrops = { Ball = 1 }, PremiumCurrencyBoost = 20 },
 }
 
 module.CanPowerUp = function(powerModeLevel, specialDrops)
