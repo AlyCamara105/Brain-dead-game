@@ -24,7 +24,7 @@ local ProfileTemplate = {
 	PowerUnit = 0,
 	PremiumCurrency = 0,
 	SpecialDrops = {},
-	Pets = { Bunny = 1 },
+	Pets = { Bunny = 10 },
 	Rebirths = 0,
 	Skins = {},
 	Skills = {},
@@ -36,7 +36,7 @@ local ProfileTemplate = {
 	Transportation = {},
 	Damage = 0,
 	PowerModeLevel = 0,
-	EquippedPets = { "Bunny" },
+	EquippedPets = { "Bunny", "Bunny", "Bunny" },
 	MaxPets = 25,
 	MaxEquippedPets = 4,
 }
@@ -79,6 +79,24 @@ local function PlayerAdded(player)
 	end
 end
 
+--[[local function SetPvpCurrency(replica, amount)
+	if replica then
+		replica:SetValue({ "PvpCurrency" }, amount)
+	end
+end
+
+local function SetDungeonRank(replica, amount)
+	if replica then
+		replica:SetValue({ "DungeonRank" }, amount)
+	end
+end
+
+local function SetDungeonLevel(replica, level)
+	if replica then
+		replica:SetValue({ "DungeonLevel" }, level)
+	end
+end]]
+
 local function GetBoostMultiplier(boost)
 	return 1 + (boost / 100)
 end
@@ -108,24 +126,6 @@ end
 local function GetNewDamage(powerUnit, damageBoost)
 	return math.ceil(powerUnit * GetBoostMultiplier(damageBoost))
 end
-
---[[local function SetPvpCurrency(replica, amount)
-	if replica then
-		replica:SetValue({ "PvpCurrency" }, amount)
-	end
-end
-
-local function SetDungeonRank(replica, amount)
-	if replica then
-		replica:SetValue({ "DungeonRank" }, amount)
-	end
-end
-
-local function SetDungeonLevel(replica, level)
-	if replica then
-		replica:SetValue({ "DungeonLevel" }, level)
-	end
-end]]
 
 local function GetRebirthsIncrement()
 	return 1
@@ -201,11 +201,11 @@ local function RemoveEquippedPet(replica, pet, amount)
 		end
 		if amount == math.huge then
 			local petCount = GetPetCount(replica.Data.EquippedPets)
-			for _ = 0, 1, petCount[pet] do
+			for _ = 1, petCount[pet], 1 do
 				_removeEquippedPet()
 			end
 		else
-			for _ = 0, 1, amount do
+			for _ = 1, amount, 1 do
 				_removeEquippedPet()
 			end
 		end
@@ -332,7 +332,7 @@ local function ProcessDeletePetsRequest(replica, petsToDelete)
 end
 
 local function ProcessFusePetRequest(replica, pet)
-	local data = replica
+	local data = replica.Data
 	local playerPets = data.Pets
 	if HasPet(playerPets, pet) then
 		local amountOfPet = playerPets[pet]
