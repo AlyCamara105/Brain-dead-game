@@ -338,7 +338,7 @@ local function SetPowerUnits()
 			local data = replica.Data
 			SetPowerUnit(replica, GetNewPowerUnit(data.PremiumCurrency, data.PowerUnit, data.Boosts.PowerUnitBoost))
 			SetDamage(replica, GetNewDamage(data.PowerUnit, data.Boosts.DamageBoost))
-			ProcessEquipPetRequest(replica, "Bunny")
+			ProcessUnequipPetRequest(replica, "Bunny")
 		end
 	end
 end
