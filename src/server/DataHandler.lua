@@ -24,12 +24,16 @@ local ProfileTemplate = {
 	PowerUnit = 0,
 	PremiumCurrency = 0,
 	SpecialDrops = {},
-	Pets = { Bunny = 1 },
+	Pets = {},
 	Rebirths = 0,
 	Costumes = {},
 	Skills = {},
 	Boosts = { PowerUnitBoost = 0, PremiumCurrencyBoost = 0, DamageBoost = 0 },
-	RebirthPoints = 0,
+	RebirthPoints = 4,
+	SpeedRebirthPoints = 0,
+	PremiumCurrencyRebirthPoints = 0,
+	LuckRebirthPoints = 0,
+	PetSlotRebirthPoints = 0,
 	PvpCurrency = 0,
 	DungeonRank = 0,
 	DungeionLevel = 0,
@@ -37,7 +41,7 @@ local ProfileTemplate = {
 	Damage = 0,
 	PowerModeLevel = 0,
 	EquippedPets = {},
-	MaxPets = 25,
+	MaxPetSlots = 25,
 	MaxEquippedPets = 4,
 }
 local ProfileStore = ProfileService.GetProfileStore("PlayerData", ProfileTemplate)
@@ -96,6 +100,36 @@ local function SetDungeonLevel(replica, level)
 		replica:SetValue({ "DungeonLevel" }, level)
 	end
 end]]
+
+local function SetMaxPetSlots(replica, amount)
+	if replica then
+		replica:SetValue({ "MaxPetSlots" }, amount)
+	end
+end
+
+local function SetSpeedRebirthPoints(replica, amount)
+	if replica then
+		replica:SetValue({ "SpeedRebirthPoints" }, amount)
+	end
+end
+
+local function SetPremiumCurrencyRebirthPoints(replica, amount)
+	if replica then
+		replica:SetValue({ "PremiumCurrencyRebirthPoints" }, amount)
+	end
+end
+
+local function SetLuckRebirthPoints(replica, amount)
+	if replica then
+		replica:SetValue({ "LuckRebirthPoints" }, amount)
+	end
+end
+
+local function SetPetSlotRebirthPoints(replica, amount)
+	if replica then
+		replica:SetValue({ "PetSlotRebirthPoints" }, amount)
+	end
+end
 
 local function GetBoostMultiplier(boost)
 	return 1 + (boost / 100)
@@ -349,6 +383,43 @@ local function ProcessFusePetRequest(replica, pet)
 			SetPets(replica, pet, amountOfPet - fuseCost)
 			AddPet(replica, petInfo.Fusion, 1)
 		end
+	end
+end
+
+local function HasRebirthPoints(replica)
+	print(replica.Data.RebirthPoints > 0)
+	return replica.Data.RebirthPoints > 0
+end
+
+local function ProcessSpeedRebirthPointsRequest(replica)
+	if HasRebirthPoints(replica) then
+		SetRebirthPoints(replica, replica.Data.RebirthPoints - 1)
+		SetSpeedRebirthPoints(replica, replica.Data.SpeedRebirthPoints + 1)
+		-- Increase the speed of the player's character
+	end
+end
+
+local function ProocessPremiumCurrencyRebirthPointsRequest(replica)
+	if HasRebirthPoints(replica) then
+		SetRebirthPoints(replica, replica.Data.RebirthPoints - 1)
+		SetPremiumCurrencyRebirthPoints(replica, replica.Data.PremiumCurrencyRebirthPoints + 1)
+		SetPremiumCurrencyBoost(replica, replica.Data.Boosts.PremiumCurrencyBoost + 10)
+	end
+end
+
+local function ProcessLuckRebirthPointsRequest(replica)
+	if HasRebirthPoints(replica) then
+		SetRebirthPoints(replica, replica.Data.RebirthPoints - 1)
+		SetLuckRebirthPoints(replica, replica.Data.LuckRebirthPoints + 1)
+		-- Increase the player's special drops luck
+	end
+end
+
+local function ProcessPetSlotRebirthPointsRequest(replica)
+	if HasRebirthPoints(replica) then
+		SetRebirthPoints(replica, replica.Data.RebirthPoints - 1)
+		SetPetSlotRebirthPoints(replica, replica.Data.PetSlotRebirthPoints + 1)
+		SetMaxPetSlots(replica, replica.Data.MaxPetSlots + 1)
 	end
 end
 
