@@ -17,6 +17,7 @@ local RebirthInfo = require(ReplicatedStorage.Shared.RebirthInfo)
 local PowerModeInfo = require(ReplicatedStorage.Shared.PowerModeInfo)
 local PetsInfo = require(ReplicatedStorage.Shared.PetsInfo)
 local CostumesInfo = require(ReplicatedStorage.Shared.CostumesInfo)
+local TransportationInfo = require(ReplicatedStorage.Shared.TransportationInfo)
 
 ----- Private Variables -----
 
@@ -31,6 +32,7 @@ local ProfileTemplate = {
 	MaxPetSlots = 25,
 	MaxEquippedPets = 4,
 	Transportation = {},
+	EquippedTransport = "",
 	PowerModeLevel = 0,
 	Costumes = {},
 	EquippedCostume = "",
@@ -302,6 +304,21 @@ local function AddTransportation(replica, value)
 		replica:ArrayInsert({ "Transportation" }, value)
 	end
 end
+local function SetEquippedTransport(replica, value)
+	if replica then
+		replica:SetValue({ "EquippedTransport" }, value)
+	end
+end
+
+local function UnequipTransport(replica)
+	SetEquippedTransport(replica, "")
+	-- Reset the player speed to normal
+end
+
+local function EquipTransport(replica, transport)
+	SetEquippedTransport(replica, transport)
+	-- Make the players speed boost by the transport percent boost
+end
 
 local function SetPowerUnit(replica, newPower)
 	if replica then
@@ -407,7 +424,6 @@ local function ProcessFusePetRequest(replica, pet)
 end
 
 local function HasRebirthPoints(replica)
-	print(replica.Data.RebirthPoints > 0)
 	return replica.Data.RebirthPoints > 0
 end
 
@@ -468,7 +484,43 @@ end
 
 local function ProcessUnequipCostumeRequest(replica, costume)
 	if HasCostume(replica, costume) then
-		UnequipCostume(replica)
+		if replica.Data.EquippedCostume == costume then
+			UnequipCostume(replica)
+		end
+	end
+end
+
+local function ProcessBuyTransportRequest(replica, transport)
+	local data = replica.Data
+	local oldPremiumCurrency = data.PremiumCurrency
+	if
+		not table.find(data.Transportation, transport)
+		and TransportationInfo.CanBuyTransport(transport, data.Rebirths, oldPremiumCurrency)
+	then
+		SetPremiumCurrency(replica, oldPremiumCurrency - TransportationInfo.Transportation[transport].Cost)
+		AddTransportation(replica, transport)
+	end
+end
+
+local function HasTransport(replica, transport)
+	return table.find(replica.Data.Transportation, transport)
+end
+
+local function ProcessEquipTransportRequest(replica, transport)
+	local data = replica.Data
+	if HasTransport(replica, transport) and data.EquippedTransport ~= transport then
+		if TransportationInfo.Transportation[data.EquippedTransport] then
+			UnequipTransport(replica)
+		end
+		EquipTransport(replica, transport)
+	end
+end
+
+local function ProcessUnequipTransportRequest(replica, transport)
+	if HasTransport(replica, transport) then
+		if replica.Data.EquippedTransport == transport then
+			UnequipTransport(replica)
+		end
 	end
 end
 
