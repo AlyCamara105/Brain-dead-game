@@ -58,6 +58,7 @@ local ProfileTemplate = {
 	LuckRebirthPoints = 0,
 	PetSlotRebirthPoints = 0,
 	Has10xMythicalPetLuck = false,
+	VIP = false,
 	--[[
 	PvpCurrency = 0,
 	DungeonRank = 0,
@@ -683,6 +684,42 @@ module.Init = function()
 			SetPowerUnits()
 		end
 	end)
+end
+
+module.BoughtMythicalHunter = function(replica)
+	replica:SetValue({ "Has10xMythicalPetLuck" }, true)
+end
+
+module.Bought3xLucky = function(replica)
+	replica:SetValue({ "Boosts", "PetCapsuleBoost" }, replica.Data.Boosts.PetCapsuleBoost + 200)
+end
+
+module.Bought3xHatch = function(replica)
+	replica:SetValue({ "PetCapsuleHatchAmount" }, 3)
+end
+
+module.Bought2xPremiumCurrency = function(replica)
+	replica:SetValue({ "Boosts", "PremiumCurrencyBoost" }, replica.Data.Boosts.PremiumCurrencyBoost + 100)
+end
+
+module.Bought2xPowerUnit = function(replica)
+	replica:SetValue({ "Boosts", "PowerUnitBoost" }, replica.Data.Boosts.PowerUnitBoost + 100)
+end
+
+module.Bought2xDamage = function(replica)
+	replica:SetValue({ "Boosts", "DamageBoost" }, replica.Data.Boosts.DamageBoost + 100)
+end
+
+module.Bought10xDamage = function(replica)
+	replica:SetValue({ "Boosts", "DamageBoost" }, replica.Data.Boosts.DamageBoost + 900)
+end
+
+module.Bought4PlusPets = function(replica)
+	replica:SetValue({ "MaxEquippedPets" }, replica.Data.MaxEquippedPets + 4)
+end
+
+module.BoughtVIP = function(replica)
+	replica:SetValue({ "VIP" }, true)
 end
 
 ----- Signal Connections -----
