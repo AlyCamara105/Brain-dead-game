@@ -47,15 +47,12 @@ local ProfileTemplate = {
 		PowerUnitBoost = 0,
 		PremiumCurrencyBoost = 0,
 		DamageBoost = 0,
-		SpecialDropsLuckBoost = 0,
 		SpeedBoost = 0,
 		PetCapsuleBoost = 0,
 	},
 	Rebirths = 0,
 	RebirthPoints = 0,
-	SpeedRebirthPoints = 0,
 	PremiumCurrencyRebirthPoints = 0,
-	LuckRebirthPoints = 0,
 	PetSlotRebirthPoints = 0,
 	Has10xMythicalPetLuck = false,
 	VIP = false,
@@ -128,21 +125,9 @@ local function SetMaxPetSlots(replica, amount)
 	end
 end
 
-local function SetSpeedRebirthPoints(replica, amount)
-	if replica then
-		replica:SetValue({ "SpeedRebirthPoints" }, amount)
-	end
-end
-
 local function SetPremiumCurrencyRebirthPoints(replica, amount)
 	if replica then
 		replica:SetValue({ "PremiumCurrencyRebirthPoints" }, amount)
-	end
-end
-
-local function SetLuckRebirthPoints(replica, amount)
-	if replica then
-		replica:SetValue({ "LuckRebirthPoints" }, amount)
 	end
 end
 
@@ -227,12 +212,6 @@ end
 local function SetSpeedBoost(replica, amount)
 	if replica then
 		replica:SetValue({ { "Boosts", "SpeedBoost" }, amount })
-	end
-end
-
-local function SetSpecialDropsLuckBoost(replica, amount)
-	if replica then
-		replica:SetValue({ "Boosts", "SpecialDropsLuckBoost" }, amount)
 	end
 end
 
@@ -489,32 +468,12 @@ local function HasRebirthPoints(replica)
 	return replica.Data.RebirthPoints > 0
 end
 
-local function ProcessSpeedRebirthPointsRequest(replica)
-	local data = replica.Data
-	local boosts = data.Boosts
-	if HasRebirthPoints(replica) then
-		SetRebirthPoints(replica, data.RebirthPoints - 1)
-		SetSpeedRebirthPoints(replica, data.SpeedRebirthPoints + 1)
-		SetSpeedBoost(replica, boosts.SpeedBoost + 5)
-		CharacterHandler.SetCharacterWalkSpeed(replica.Tags.Player, GetMultiplier(boosts.SpeedBoost))
-	end
-end
-
 local function ProocessPremiumCurrencyRebirthPointsRequest(replica)
 	local data = replica.Data
 	if HasRebirthPoints(replica) then
 		SetRebirthPoints(replica, data.RebirthPoints - 1)
 		SetPremiumCurrencyRebirthPoints(replica, data.PremiumCurrencyRebirthPoints + 1)
 		SetPremiumCurrencyBoost(replica, data.Boosts.PremiumCurrencyBoost + 5)
-	end
-end
-
-local function ProcessLuckRebirthPointsRequest(replica)
-	local data = replica.Data
-	if HasRebirthPoints(replica) then
-		SetRebirthPoints(replica, data.RebirthPoints - 1)
-		SetLuckRebirthPoints(replica, data.LuckRebirthPoints + 1)
-		SetSpecialDropsLuckBoost(replica, data.Boosts.SpecialDropsLuckBoost + 5)
 	end
 end
 
@@ -733,11 +692,7 @@ SignalManager["KilledMob"]:Connect(function(player, incrementPremiumCurrency)
 			replica,
 			GetNewPremuimCurrency(data.PremiumCurrency, incrementPremiumCurrency, boosts.PremiumCurrencyBoost)
 		)
-		AddSpecialDrops(
-			replica,
-			LootPlanHandler.SpecialDropsLootPlan:GetRandomLoot(GetMultiplier(boosts.SpecialDropsLuckBoost)),
-			1
-		)
+		AddSpecialDrops(replica, LootPlanHandler.SpecialDropsLootPlan:GetRandomLoot(), 1)
 	end
 end)
 
