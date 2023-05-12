@@ -19,6 +19,8 @@ local PetsInfo = require(ReplicatedStorage.Shared.PetsInfo)
 local CostumesInfo = require(ReplicatedStorage.Shared.CostumesInfo)
 local TransportationInfo = require(ReplicatedStorage.Shared.TransportationInfo)
 local SkillsInfo = require(ReplicatedStorage.Shared.SkillsInfo)
+local LootPlanHandler = require(ServerScriptService.Server.LootPlanHandler)
+local TeleportsInfo = require(ReplicatedStorage.Shared.TeleportInfo)
 
 ----- Private Variables -----
 
@@ -565,6 +567,21 @@ local function ProcessEquipSkillRequest(replica, skill)
 	end
 end
 
+local function ProcessBuyPetCapsuleRequest(replica, area, capsule)
+	if PetsInfo.ValidAreaAndCapsule(area, capsule) then
+		local data = replica.Data
+		if TeleportsInfo.CanBeInArea(area, data.Rebirths) then
+			local oldPremiumCurrency = data.PremiumCurrency
+			if PetsInfo.CanPurchaseCapsule(area, capsule, oldPremiumCurrency) then
+				-- Add the luck gamespass multiplier and the multisummon in the get random loot function parameters
+				local Pet = LootPlanHandler.PetLootPlans[area].Capsules[capsule]:GetRandomLoot()
+				AddPet(replica, Pet, 1)
+				SetPremiumCurrency(replica, oldPremiumCurrency - PetsInfo.Capsules[area].Capsules[capsule].Cost)
+			end
+		end
+	end
+end
+
 local function SetPowerUnits()
 	for _, master in pairs(ServerData.PlayerDataMasters) do
 		if master.Profile:IsActive() then
@@ -572,6 +589,7 @@ local function SetPowerUnits()
 			local data = replica.Data
 			SetPowerUnit(replica, GetNewPowerUnit(data.PremiumCurrency, data.PowerUnit, data.Boosts.PowerUnitBoost))
 			SetDamage(replica, GetNewDamage(data.PowerUnit, data.Boosts.DamageBoost))
+			ProcessBuyPetCapsuleRequest(replica, 1, 1)
 		end
 	end
 end

@@ -14,3 +14,4 @@
 /src/shared/t.lua
 /src/server/ReplicaService.lua
 /src/server/ProfileService.lua
+/src/shared/LootPlan.lua

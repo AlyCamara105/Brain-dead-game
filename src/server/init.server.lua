@@ -6,6 +6,8 @@ local ServerScriptService = game:GetService("ServerScriptService")
 
 local DataHandler = require(ServerScriptService.Server.DataHandler)
 local MobHandler = require(ServerScriptService.Server.MobHandler)
+local LootPlanHandler = require(ServerScriptService.Server.LootPlanHandler)
 
 DataHandler.Init()
 MobHandler.Init()
+LootPlanHandler.Init()
