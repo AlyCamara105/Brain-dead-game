@@ -32,6 +32,7 @@ local ProfileTemplate = {
 	Damage = 0,
 	SpecialDrops = {},
 	Pets = {},
+	PetCapsuleHatchAmount = 1,
 	EquippedPets = {},
 	MaxPetSlots = 25,
 	MaxEquippedPets = 4,
@@ -42,13 +43,21 @@ local ProfileTemplate = {
 	EquippedCostume = "",
 	Skills = { "Rocket" },
 	EquippedSkill = "Rocket",
-	Boosts = { PowerUnitBoost = 0, PremiumCurrencyBoost = 0, DamageBoost = 0, SpecialDropsLuckBoost = 0, SpeedBoost = 0 },
+	Boosts = {
+		PowerUnitBoost = 0,
+		PremiumCurrencyBoost = 0,
+		DamageBoost = 0,
+		SpecialDropsLuckBoost = 0,
+		SpeedBoost = 0,
+		PetCapsuleBoost = 0,
+	},
 	Rebirths = 0,
 	RebirthPoints = 0,
 	SpeedRebirthPoints = 0,
 	PremiumCurrencyRebirthPoints = 0,
 	LuckRebirthPoints = 0,
 	PetSlotRebirthPoints = 0,
+	Has10xMythicalPetLuck = false,
 	--[[
 	PvpCurrency = 0,
 	DungeonRank = 0,
@@ -603,16 +612,34 @@ local function ProcessEquipSkillRequest(replica, skill)
 	end
 end
 
-local function ProcessBuyPetCapsuleRequest(replica, area, capsule)
+local function ProcessBuyPetCapsuleRequest(replica, area, capsule, amount)
 	if PetsInfo.ValidAreaAndCapsule(area, capsule) then
 		local data = replica.Data
 		if TeleportsInfo.CanBeInArea(area, data.Rebirths) then
 			local oldPremiumCurrency = data.PremiumCurrency
-			if PetsInfo.CanPurchaseCapsule(area, capsule, oldPremiumCurrency) then
-				-- Add the luck gamespass multiplier and the multisummon in the get random loot function parameters
-				local Pet = LootPlanHandler.PetLootPlans[area].Capsules[capsule]:GetRandomLoot()
-				AddPet(replica, Pet, 1)
-				SetPremiumCurrency(replica, oldPremiumCurrency - PetsInfo.Capsules[area].Capsules[capsule].Cost)
+			if amount <= data.PetCapsuleHatchAmount then
+				local capsuleLootPlan = LootPlanHandler.PetLootPlans[area].Capsules[capsule]
+				local changedPetChances = {}
+				if data.Has10xMythicalPetLuck then
+					local mythicalPets = PetsInfo.GetMythicalPetsFromCapsule(area, capsule)
+					for _, pet in ipairs(mythicalPets) do
+						capsuleLootPlan:ChangeLootChance(pet, PetsInfo.GetPetChance(area, capsule, pet) * 10)
+						table.insert(changedPetChances, pet)
+					end
+				end
+				for _ = 1, amount, 1 do
+					if #data.Pets + 1 <= data.MaxPets and PetsInfo.CanPurchaseCapsule(area, capsule, oldPremiumCurrency) then
+						local Pet = capsuleLootPlan:GetRandomLoot(
+							GetMultiplier(data.Boosts.PetCapsuleBoost)
+						)
+						AddPet(replica, Pet, 1)
+						SetPremiumCurrency(replica, oldPremiumCurrency - PetsInfo.Capsules[area].Capsules[capsule].Cost)
+						oldPremiumCurrency = data.PremiumCurrency
+					end
+				end
+				for _, pet in pairs(changedPetChances) do
+					capsuleLootPlan:ChangeLootChance(pet, PetsInfo.GetPetChance(area, capsule, pet))
+				end
 			end
 		end
 	end
