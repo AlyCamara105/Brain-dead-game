@@ -42,7 +42,7 @@ local ProfileTemplate = {
 	EquippedCostume = "",
 	Skills = { "Rocket" },
 	EquippedSkill = "Rocket",
-	Boosts = { PowerUnitBoost = 0, PremiumCurrencyBoost = 0, DamageBoost = 0 },
+	Boosts = { PowerUnitBoost = 0, PremiumCurrencyBoost = 0, DamageBoost = 0, SpecialDropsLuckBoost = 0, SpeedBoost = 0 },
 	Rebirths = 0,
 	RebirthPoints = 0,
 	SpeedRebirthPoints = 0,
@@ -214,6 +214,18 @@ local function SetPowerUnitBoost(replica, amount)
 	end
 end
 
+local function SetSpeedBoost(replica, amount)
+	if replica then
+		replica:SetValue({ { "Boosts", "SpeedBoost" }, amount })
+	end
+end
+
+local function SetSpecialDropsLuckBoost(replica, amount)
+	if replica then
+		replica:SetValue({ "Boosts", "SpecialDropsLuckBoost" }, amount)
+	end
+end
+
 local function SetSpecialDrops(replica, specialDrop, amount)
 	if replica then
 		replica:Write("SetSpecialDrops", specialDrop, amount)
@@ -343,21 +355,21 @@ local function SetEquippedTransport(replica, value)
 	end
 end
 
-local function GetSpeedMultiplier(rebirthPoints)
-	return GetMultiplier(rebirthPoints * 5)
-end
-
 local function UnequipTransport(replica)
+	local data = replica.Data
+	local boosts = data.Boosts
+	local oldTransport = data.EquippedTransport
 	SetEquippedTransport(replica, "")
-	CharacterHandler.SetCharacterWalkSpeed(replica.Tags.Player, GetSpeedMultiplier(replica.Data.SpeedRebirthPoints))
+	SetSpeedBoost(replica, boosts.SpeedBoost - TransportationInfo.Transportation[oldTransport].SpeedBoost)
+	CharacterHandler.SetCharacterWalkSpeed(replica.Tags.Player, GetMultiplier(boosts.SpeedBoost))
 end
 
 local function EquipTransport(replica, transport)
+	local data = replica.Data
+	local boosts = data.Boosts
 	SetEquippedTransport(replica, transport)
-	CharacterHandler.SetCharacterWalkSpeed(
-		replica.Tags.Player,
-		GetMultiplier(TransportationInfo.Transportation[transport].Speed) + GetSpeedMultiplier(replica.Data.SpeedRebirthPoints)
-	)
+	SetSpeedBoost(replica, boosts.SpeedBoost + TransportationInfo.Transportation[transport].SpeedBoost)
+	CharacterHandler.SetCharacterWalkSpeed(replica.Tags.Player, GetMultiplier(boosts.SpeedBoost))
 end
 
 local function SetPowerUnit(replica, newPower)
@@ -468,34 +480,31 @@ local function HasRebirthPoints(replica)
 end
 
 local function ProcessSpeedRebirthPointsRequest(replica)
+	local data = replica.Data
+	local boosts = data.Boosts
 	if HasRebirthPoints(replica) then
-		SetRebirthPoints(replica, replica.Data.RebirthPoints - 1)
-		SetSpeedRebirthPoints(replica, replica.Data.SpeedRebirthPoints + 1)
-		if replica.Data.EquippedTransport ~= "" then
-			CharacterHandler.SetCharacterWalkSpeed(
-				replica.Tags.Player,
-				GetMultiplier(TransportationInfo.Transportation[replica.Data.EquippedTransport].Speed)
-					+ GetSpeedMultiplier(replica.Data.SpeedRebirthPoints)
-			)
-		else
-			CharacterHandler.SetCharacterWalkSpeed(replica.Tags.Player, GetSpeedMultiplier(replica.Data.SpeedRebirthPoints))
-		end
+		SetRebirthPoints(replica, data.RebirthPoints - 1)
+		SetSpeedRebirthPoints(replica, data.SpeedRebirthPoints + 1)
+		SetSpeedBoost(replica, boosts.SpeedBoost + 5)
+		CharacterHandler.SetCharacterWalkSpeed(replica.Tags.Player, GetMultiplier(boosts.SpeedBoost))
 	end
 end
 
 local function ProocessPremiumCurrencyRebirthPointsRequest(replica)
+	local data = replica.Data
 	if HasRebirthPoints(replica) then
-		SetRebirthPoints(replica, replica.Data.RebirthPoints - 1)
-		SetPremiumCurrencyRebirthPoints(replica, replica.Data.PremiumCurrencyRebirthPoints + 1)
-		SetPremiumCurrencyBoost(replica, replica.Data.Boosts.PremiumCurrencyBoost + 10)
+		SetRebirthPoints(replica, data.RebirthPoints - 1)
+		SetPremiumCurrencyRebirthPoints(replica, data.PremiumCurrencyRebirthPoints + 1)
+		SetPremiumCurrencyBoost(replica, data.Boosts.PremiumCurrencyBoost + 5)
 	end
 end
 
 local function ProcessLuckRebirthPointsRequest(replica)
+	local data = replica.Data
 	if HasRebirthPoints(replica) then
-		SetRebirthPoints(replica, replica.Data.RebirthPoints - 1)
-		SetLuckRebirthPoints(replica, replica.Data.LuckRebirthPoints + 1)
-		-- Increase the player's special drops luck
+		SetRebirthPoints(replica, data.RebirthPoints - 1)
+		SetLuckRebirthPoints(replica, data.LuckRebirthPoints + 1)
+		SetSpecialDropsLuckBoost(replica, data.Boosts.SpecialDropsLuckBoost + 5)
 	end
 end
 
@@ -504,10 +513,11 @@ local function HasCostume(replica, costume)
 end
 
 local function ProcessPetSlotRebirthPointsRequest(replica)
+	local data = replica.Data
 	if HasRebirthPoints(replica) then
-		SetRebirthPoints(replica, replica.Data.RebirthPoints - 1)
-		SetPetSlotRebirthPoints(replica, replica.Data.PetSlotRebirthPoints + 1)
-		SetMaxPetSlots(replica, replica.Data.MaxPetSlots + 1)
+		SetRebirthPoints(replica, data.RebirthPoints - 1)
+		SetPetSlotRebirthPoints(replica, data.PetSlotRebirthPoints + 1)
+		SetMaxPetSlots(replica, data.MaxPetSlots + 1)
 	end
 end
 
@@ -653,12 +663,17 @@ SignalManager["KilledMob"] = Signal.new()
 SignalManager["KilledMob"]:Connect(function(player, incrementPremiumCurrency)
 	local replica = ServerData.GetPlayerReplica(player)
 	if replica then
-		local playerData = replica.Data
+		local data = replica.Data
+		local boosts = data.Boosts
 		SetPremiumCurrency(
 			replica,
-			GetNewPremuimCurrency(playerData.PremiumCurrency, incrementPremiumCurrency, playerData.Boosts.PremiumCurrencyBoost)
+			GetNewPremuimCurrency(data.PremiumCurrency, incrementPremiumCurrency, boosts.PremiumCurrencyBoost)
 		)
-		SetSpecialDrops(replica, LootPlanHandler.SpecialDropsLootPlan:GetRandomLoot(), 1)
+		AddSpecialDrops(
+			replica,
+			LootPlanHandler.SpecialDropsLootPlan:GetRandomLoot(GetMultiplier(boosts.SpecialDropsLuckBoost)),
+			1
+		)
 	end
 end)
 
