@@ -18,6 +18,7 @@ local PowerModeInfo = require(ReplicatedStorage.Shared.PowerModeInfo)
 local PetsInfo = require(ReplicatedStorage.Shared.PetsInfo)
 local CostumesInfo = require(ReplicatedStorage.Shared.CostumesInfo)
 local TransportationInfo = require(ReplicatedStorage.Shared.TransportationInfo)
+local SkillsInfo = require(ReplicatedStorage.Shared.SkillsInfo)
 
 ----- Private Variables -----
 
@@ -36,7 +37,8 @@ local ProfileTemplate = {
 	PowerModeLevel = 0,
 	Costumes = {},
 	EquippedCostume = "",
-	Skills = {},
+	Skills = {"Rocket"},
+	EquippedSkill = "Rocket",
 	Boosts = { PowerUnitBoost = 0, PremiumCurrencyBoost = 0, DamageBoost = 0 },
 	Rebirths = 0,
 	RebirthPoints = 0,
@@ -44,9 +46,11 @@ local ProfileTemplate = {
 	PremiumCurrencyRebirthPoints = 0,
 	LuckRebirthPoints = 0,
 	PetSlotRebirthPoints = 0,
+	--[[
 	PvpCurrency = 0,
 	DungeonRank = 0,
 	DungeionLevel = 0,
+	--]]
 }
 local ProfileStore = ProfileService.GetProfileStore("PlayerData", ProfileTemplate)
 local PlayerWriteLib = ReplicatedStorage.Shared.PlayerWriteLib
@@ -293,10 +297,26 @@ local function EquipCostume(replica, costume)
 	SetPowerUnitBoost(replica, replica.Data.Boosts.PowerUnitBoost + CostumesInfo.Costumes[costume].PowerUnitBoost)
 end
 
-local function AddSkills(replica, value)
+local function AddSkill(replica, skill)
 	if replica then
-		replica:ArrayInsert({ "Skills" }, value)
+		replica:ArrayInsert({ "Skills" }, skill)
 	end
+end
+
+local function SetEquippedSkill(replica, skill)
+	if replica then
+		replica:SetValue({ "EquippedSkill" }, skill)
+	end
+end
+
+local function EquipSkill(replica, skill)
+	SetEquippedSkill(replica, skill)
+	SetDamageBoost(replica, replica.Data.Boosts.DamageBoost + SkillsInfo.Skills[skill].DamageBoost)
+end
+
+local function UnequipSkill(replica)
+	local data = replica.Data
+	SetDamageBoost(replica, data.Boosts.DamageBoost - SkillsInfo.Skills[data.EquippedSkill].DamageBoost)
 end
 
 local function AddTransportation(replica, value)
@@ -451,6 +471,10 @@ local function ProcessLuckRebirthPointsRequest(replica)
 	end
 end
 
+local function HasCostume(replica, costume)
+	return table.find(replica.Data.Costumes, costume)
+end
+
 local function ProcessPetSlotRebirthPointsRequest(replica)
 	if HasRebirthPoints(replica) then
 		SetRebirthPoints(replica, replica.Data.RebirthPoints - 1)
@@ -462,14 +486,10 @@ end
 local function ProcessBuyCostumeRequest(replica, costume)
 	local data = replica.Data
 	local oldPremiumCurrency = data.PremiumCurrency
-	if not table.find(data.Costumes, costume) and CostumesInfo.CanBuyCostume(costume, data.Rebirths, oldPremiumCurrency) then
+	if not HasCostume(replica, costume) and CostumesInfo.CanBuyCostume(costume, data.Rebirths, oldPremiumCurrency) then
 		SetPremiumCurrency(replica, oldPremiumCurrency - CostumesInfo.Costumes[costume].Cost)
 		AddCostume(replica, costume)
 	end
-end
-
-local function HasCostume(replica, costume)
-	return table.find(replica.Data.Costumes, costume)
 end
 
 local function ProcessEquipCostumeRequest(replica, costume)
@@ -490,20 +510,20 @@ local function ProcessUnequipCostumeRequest(replica, costume)
 	end
 end
 
+local function HasTransport(replica, transport)
+	return table.find(replica.Data.Transportation, transport)
+end
+
 local function ProcessBuyTransportRequest(replica, transport)
 	local data = replica.Data
 	local oldPremiumCurrency = data.PremiumCurrency
 	if
-		not table.find(data.Transportation, transport)
+		not HasTransport(replica, transport)
 		and TransportationInfo.CanBuyTransport(transport, data.Rebirths, oldPremiumCurrency)
 	then
 		SetPremiumCurrency(replica, oldPremiumCurrency - TransportationInfo.Transportation[transport].Cost)
 		AddTransportation(replica, transport)
 	end
-end
-
-local function HasTransport(replica, transport)
-	return table.find(replica.Data.Transportation, transport)
 end
 
 local function ProcessEquipTransportRequest(replica, transport)
@@ -521,6 +541,27 @@ local function ProcessUnequipTransportRequest(replica, transport)
 		if replica.Data.EquippedTransport == transport then
 			UnequipTransport(replica)
 		end
+	end
+end
+
+local function HasSkill(replica, skill)
+	return table.find(replica.Data.Skills, skill)
+end
+
+local function ProcessBuySkillRequest(replica, skill) 
+	local data = replica.Data
+	local oldPremiumCurrency = data.PremiumCurrency
+	if not HasSkill(replica, skill) and SkillsInfo.CanBuySkill(skill, data.Rebirths, data.PremiumCurrency) then
+		SetPremiumCurrency(replica, oldPremiumCurrency - SkillsInfo.Skills[skill].Cost)
+		AddSkill(replica, skill)
+	end
+end
+
+local function ProcessEquipSkillRequest(replica, skill)
+	local data = replica.Data
+	if HasSkill(replica, skill) and data.EquippedSkill ~= skill then
+		UnequipSkill(replica)
+		EquipSkill(replica, skill)
 	end
 end
 
