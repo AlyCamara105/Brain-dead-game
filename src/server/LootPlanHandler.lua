@@ -9,9 +9,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LootPlan = require(ReplicatedStorage.Shared.LootPlan)
 local PetsInfo = require(ReplicatedStorage.Shared.PetsInfo)
 
+----- Private Variables -----
+
+local specialDropRates = {
+    Ball = 10
+}
+
 ----- Public Variables -----
 
 module.PetLootPlans = {}
+
+module.SpecialDropsLootPlan = LootPlan.new("Single")
 
 ----- Public Functions -----
 
@@ -26,6 +34,8 @@ module.Init = function()
         end
         table.insert(module.PetLootPlans, lootPlanPetArea)
     end
+    
+    module.SpecialDropsLootPlan:AddLootFromTable(specialDropRates)
 end
 
 return module

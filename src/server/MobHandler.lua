@@ -56,7 +56,7 @@ local function AddMobZone(mobPlaceholder, mobTag)
 				local newMobHealth = playerMobData.Health - playerDamage
 				if newMobHealth <= 0 then
 					playerMobData.Health = MobInfo.GetMobInfo(mobTag).Health
-					SignalManager["GivePremiumCurrency"]:Fire(player, playerMobData.PremiumCurrency)
+					SignalManager["KilledMob"]:Fire(player, playerMobData.PremiumCurrency)
 					-- Send the client an event for feedback
 				else
 					playerMobData.Health = newMobHealth

@@ -220,6 +220,16 @@ local function SetSpecialDrops(replica, specialDrop, amount)
 	end
 end
 
+local function AddSpecialDrops(replica, specialDrop, amount)
+	local data = replica.Data
+	local oldSpecialDrop = data.SpecialDrops[specialDrop]
+	if oldSpecialDrop then
+		SetSpecialDrops(replica, specialDrop, oldSpecialDrop + amount)
+	else
+		SetSpecialDrops(replica, specialDrop, amount)
+	end
+end
+
 local function GetPetCount(pets)
 	local count = {}
 	for _, pet in ipairs(pets) do
@@ -605,7 +615,6 @@ local function SetPowerUnits()
 			local data = replica.Data
 			SetPowerUnit(replica, GetNewPowerUnit(data.PremiumCurrency, data.PowerUnit, data.Boosts.PowerUnitBoost))
 			SetDamage(replica, GetNewDamage(data.PowerUnit, data.Boosts.DamageBoost))
-			ProcessBuyPetCapsuleRequest(replica, 1, 1)
 		end
 	end
 end
@@ -640,8 +649,8 @@ module.Init = function()
 end
 
 ----- Signal Connections -----
-SignalManager["GivePremiumCurrency"] = Signal.new()
-SignalManager["GivePremiumCurrency"]:Connect(function(player, incrementPremiumCurrency)
+SignalManager["KilledMob"] = Signal.new()
+SignalManager["KilledMob"]:Connect(function(player, incrementPremiumCurrency)
 	local replica = ServerData.GetPlayerReplica(player)
 	if replica then
 		local playerData = replica.Data
@@ -649,6 +658,7 @@ SignalManager["GivePremiumCurrency"]:Connect(function(player, incrementPremiumCu
 			replica,
 			GetNewPremuimCurrency(playerData.PremiumCurrency, incrementPremiumCurrency, playerData.Boosts.PremiumCurrencyBoost)
 		)
+		SetSpecialDrops(replica, LootPlanHandler.SpecialDropsLootPlan:GetRandomLoot(), 1)
 	end
 end)
 
