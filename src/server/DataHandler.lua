@@ -23,14 +23,21 @@ local CostumesInfo = require(ReplicatedStorage.Shared.CostumesInfo)
 local Players = game:GetService("Players")
 local ProfileTemplate = {
 	PowerUnit = 0,
-	PremiumCurrency = 10000,
+	PremiumCurrency = 0,
+	Damage = 0,
 	SpecialDrops = {},
 	Pets = {},
-	Rebirths = 0,
+	EquippedPets = {},
+	MaxPetSlots = 25,
+	MaxEquippedPets = 4,
+	Transportation = {},
+	PowerModeLevel = 0,
 	Costumes = {},
+	EquippedCostume = "",
 	Skills = {},
 	Boosts = { PowerUnitBoost = 0, PremiumCurrencyBoost = 0, DamageBoost = 0 },
-	RebirthPoints = 4,
+	Rebirths = 0,
+	RebirthPoints = 0,
 	SpeedRebirthPoints = 0,
 	PremiumCurrencyRebirthPoints = 0,
 	LuckRebirthPoints = 0,
@@ -38,12 +45,6 @@ local ProfileTemplate = {
 	PvpCurrency = 0,
 	DungeonRank = 0,
 	DungeionLevel = 0,
-	Transportation = {},
-	Damage = 0,
-	PowerModeLevel = 0,
-	EquippedPets = {},
-	MaxPetSlots = 25,
-	MaxEquippedPets = 4,
 }
 local ProfileStore = ProfileService.GetProfileStore("PlayerData", ProfileTemplate)
 local PlayerWriteLib = ReplicatedStorage.Shared.PlayerWriteLib
@@ -272,6 +273,24 @@ local function AddCostume(replica, value)
 	end
 end
 
+local function SetEquippedCostume(replica, value)
+	if replica then
+		replica:SetValue("EquippedCostume", value)
+	end
+end
+
+local function UnequipCostume(replica)
+	local data = replica.Data
+	local oldCostume = data.EquippedCostume
+	SetEquippedCostume(replica, "")
+	SetPowerUnitBoost(replica, data.Boosts.PowerUnitBoost - CostumesInfo.Costumes[oldCostume].PowerUnitBoost)
+end
+
+local function EquipCostume(replica, costume)
+	SetEquippedCostume(replica, costume)
+	SetPowerUnitBoost(replica, replica.Data.Boosts.PowerUnitBoost + CostumesInfo.Costumes[costume].PowerUnitBoost)
+end
+
 local function AddSkills(replica, value)
 	if replica then
 		replica:ArrayInsert({ "Skills" }, value)
@@ -430,8 +449,26 @@ local function ProcessBuyCostumeRequest(replica, costume)
 	if not table.find(data.Costumes, costume) and CostumesInfo.CanBuyCostume(costume, data.Rebirths, oldPremiumCurrency) then
 		SetPremiumCurrency(replica, oldPremiumCurrency - CostumesInfo.Costumes[costume].Cost)
 		AddCostume(replica, costume)
-		print(replica.Data.Costumes)
-		print(replica.Data.PremiumCurrency)
+	end
+end
+
+local function HasCostume(replica, costume)
+	return table.find(replica.Data.Costumes, costume)
+end
+
+local function ProcessEquipCostumeRequest(replica, costume)
+	local data = replica.Data
+	if HasCostume(replica, costume) and data.EquippedCostume ~= costume then
+		if CostumesInfo.Costumes[data.EquippedCostume] then
+			UnequipCostume(replica)
+		end
+		EquipCostume(replica, costume)
+	end
+end
+
+local function ProcessUnequipCostumeRequest(replica, costume)
+	if HasCostume(replica, costume) then
+		UnequipCostume(replica)
 	end
 end
 
@@ -442,7 +479,6 @@ local function SetPowerUnits()
 			local data = replica.Data
 			SetPowerUnit(replica, GetNewPowerUnit(data.PremiumCurrency, data.PowerUnit, data.Boosts.PowerUnitBoost))
 			SetDamage(replica, GetNewDamage(data.PowerUnit, data.Boosts.DamageBoost))
-			ProcessBuyCostumeRequest(replica, "Luffy")
 		end
 	end
 end
