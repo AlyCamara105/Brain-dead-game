@@ -563,12 +563,14 @@ end
 
 local function ProcessBuyTransportRequest(replica, transport)
 	local data = replica.Data
-	local oldPremiumCurrency = data.PremiumCurrency
 	if
 		not HasTransport(replica, transport)
-		and TransportationInfo.CanBuyTransport(transport, data.Rebirths, oldPremiumCurrency)
+		and TransportationInfo.CanBuyTransport(transport, data.Rebirths, data.SpecialDrops)
 	then
-		SetPremiumCurrency(replica, oldPremiumCurrency - TransportationInfo.Transportation[transport].Cost)
+		for drop, cost in pairs(TransportationInfo.Transportation[transport].Cost) do
+			SetSpecialDrops(replica, drop, data.SpecialDrops[drop] - cost)
+		end
+
 		AddTransportation(replica, transport)
 	end
 end
@@ -629,9 +631,7 @@ local function ProcessBuyPetCapsuleRequest(replica, area, capsule, amount)
 				end
 				for _ = 1, amount, 1 do
 					if #data.Pets + 1 <= data.MaxPets and PetsInfo.CanPurchaseCapsule(area, capsule, oldPremiumCurrency) then
-						local Pet = capsuleLootPlan:GetRandomLoot(
-							GetMultiplier(data.Boosts.PetCapsuleBoost)
-						)
+						local Pet = capsuleLootPlan:GetRandomLoot(GetMultiplier(data.Boosts.PetCapsuleBoost))
 						AddPet(replica, Pet, 1)
 						SetPremiumCurrency(replica, oldPremiumCurrency - PetsInfo.Capsules[area].Capsules[capsule].Cost)
 						oldPremiumCurrency = data.PremiumCurrency
