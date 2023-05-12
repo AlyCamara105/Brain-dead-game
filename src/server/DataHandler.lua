@@ -21,6 +21,7 @@ local TransportationInfo = require(ReplicatedStorage.Shared.TransportationInfo)
 local SkillsInfo = require(ReplicatedStorage.Shared.SkillsInfo)
 local LootPlanHandler = require(ServerScriptService.Server.LootPlanHandler)
 local TeleportsInfo = require(ReplicatedStorage.Shared.TeleportInfo)
+local CharacterHandler = require(ServerScriptService.Server.CharacterHandler)
 
 ----- Private Variables -----
 
@@ -39,7 +40,7 @@ local ProfileTemplate = {
 	PowerModeLevel = 0,
 	Costumes = {},
 	EquippedCostume = "",
-	Skills = {"Rocket"},
+	Skills = { "Rocket" },
 	EquippedSkill = "Rocket",
 	Boosts = { PowerUnitBoost = 0, PremiumCurrencyBoost = 0, DamageBoost = 0 },
 	Rebirths = 0,
@@ -141,7 +142,7 @@ local function SetPetSlotRebirthPoints(replica, amount)
 	end
 end
 
-local function GetBoostMultiplier(boost)
+local function GetMultiplier(boost)
 	return 1 + (boost / 100)
 end
 
@@ -158,7 +159,7 @@ local function SetPremiumCurrency(replica, amount)
 end
 
 local function GetNewPremuimCurrency(oldPremiumCurrency, incrementPremiumCurrency, premiumCurrencyBoost)
-	return oldPremiumCurrency + math.ceil(incrementPremiumCurrency * GetBoostMultiplier(premiumCurrencyBoost))
+	return oldPremiumCurrency + math.ceil(incrementPremiumCurrency * GetMultiplier(premiumCurrencyBoost))
 end
 
 local function SetDamage(replica, amount)
@@ -168,7 +169,7 @@ local function SetDamage(replica, amount)
 end
 
 local function GetNewDamage(powerUnit, damageBoost)
-	return math.ceil(powerUnit * GetBoostMultiplier(damageBoost))
+	return math.ceil(powerUnit * GetMultiplier(damageBoost))
 end
 
 local function GetRebirthsIncrement()
@@ -332,14 +333,21 @@ local function SetEquippedTransport(replica, value)
 	end
 end
 
+local function GetSpeedMultiplier(rebirthPoints)
+	return GetMultiplier(rebirthPoints * 5)
+end
+
 local function UnequipTransport(replica)
 	SetEquippedTransport(replica, "")
-	-- Reset the player speed to normal
+	CharacterHandler.SetCharacterWalkSpeed(replica.Tags.Player, GetSpeedMultiplier(replica.Data.SpeedRebirthPoints))
 end
 
 local function EquipTransport(replica, transport)
 	SetEquippedTransport(replica, transport)
-	-- Make the players speed boost by the transport percent boost
+	CharacterHandler.SetCharacterWalkSpeed(
+		replica.Tags.Player,
+		GetMultiplier(TransportationInfo.Transportation[transport].Speed) + GetSpeedMultiplier(replica.Data.SpeedRebirthPoints)
+	)
 end
 
 local function SetPowerUnit(replica, newPower)
@@ -353,7 +361,7 @@ local function GetPowerUnitIncrement(premiumCurrency)
 end
 
 local function GetNewPowerUnit(premiumCurrency, oldPower, powerUnitBoost)
-	return oldPower + math.ceil(GetPowerUnitIncrement(premiumCurrency) * GetBoostMultiplier(powerUnitBoost))
+	return oldPower + math.ceil(GetPowerUnitIncrement(premiumCurrency) * GetMultiplier(powerUnitBoost))
 end
 
 local function ProcessRebirthRequest(replica)
@@ -453,7 +461,15 @@ local function ProcessSpeedRebirthPointsRequest(replica)
 	if HasRebirthPoints(replica) then
 		SetRebirthPoints(replica, replica.Data.RebirthPoints - 1)
 		SetSpeedRebirthPoints(replica, replica.Data.SpeedRebirthPoints + 1)
-		-- Increase the speed of the player's character
+		if replica.Data.EquippedTransport ~= "" then
+			CharacterHandler.SetCharacterWalkSpeed(
+				replica.Tags.Player,
+				GetMultiplier(TransportationInfo.Transportation[replica.Data.EquippedTransport].Speed)
+					+ GetSpeedMultiplier(replica.Data.SpeedRebirthPoints)
+			)
+		else
+			CharacterHandler.SetCharacterWalkSpeed(replica.Tags.Player, GetSpeedMultiplier(replica.Data.SpeedRebirthPoints))
+		end
 	end
 end
 
@@ -550,7 +566,7 @@ local function HasSkill(replica, skill)
 	return table.find(replica.Data.Skills, skill)
 end
 
-local function ProcessBuySkillRequest(replica, skill) 
+local function ProcessBuySkillRequest(replica, skill)
 	local data = replica.Data
 	local oldPremiumCurrency = data.PremiumCurrency
 	if not HasSkill(replica, skill) and SkillsInfo.CanBuySkill(skill, data.Rebirths, data.PremiumCurrency) then
