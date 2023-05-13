@@ -11,7 +11,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ProfileService = require(ServerScriptService.Server.ProfileService)
 local ReplicaService = require(ServerScriptService.Server.ReplicaService)
 local ServerData = require(ServerScriptService.Server.ServerData)
-local Signal = require(ReplicatedStorage.Shared.Signal)
 local SignalManager = require(ServerScriptService.Server.SignalManager)
 local RebirthInfo = require(ReplicatedStorage.Shared.RebirthInfo)
 local PowerModeInfo = require(ReplicatedStorage.Shared.PowerModeInfo)
@@ -98,6 +97,13 @@ local function PlayerAdded(player)
 		-- The profile couldn't be loaded possibly due to other
 		--   Roblox servers trying to load this profile at the same time:
 		player:Kick()
+	end
+end
+
+local function PlayerRemoving(player)
+	local profile = ServerData.GetPlayerProfile(player)
+	if profile ~= nil then
+		profile:Release()
 	end
 end
 
@@ -626,14 +632,6 @@ module.Init = function()
 	end
 
 	----- Connections -----
-	Players.PlayerAdded:Connect(PlayerAdded)
-
-	Players.PlayerRemoving:Connect(function(player)
-		local profile = ServerData.GetPlayerProfile(player)
-		if profile ~= nil then
-			profile:Release()
-		end
-	end)
 
 	RunService.Heartbeat:Connect(function()
 		local currentTime = tick()
@@ -642,6 +640,27 @@ module.Init = function()
 			TimeLastPowerUnitGiven = currentTime
 			SetPowerUnits()
 		end
+	end)
+
+	SignalManager.KilledMob:Connect(function(player, incrementPremiumCurrency)
+		local replica = ServerData.GetPlayerReplica(player)
+		if replica then
+			local data = replica.Data
+			local boosts = data.Boosts
+			SetPremiumCurrency(
+				replica,
+				GetNewPremuimCurrency(data.PremiumCurrency, incrementPremiumCurrency, boosts.PremiumCurrencyBoost)
+			)
+			AddSpecialDrops(replica, LootPlanHandler.SpecialDropsLootPlan:GetRandomLoot(), 1)
+		end
+	end)
+	
+	SignalManager.PlayerAdded:Connect(function(player)
+		PlayerAdded(player)
+	end)
+	
+	SignalManager.PlayerRemoving:Connect(function(player)
+		PlayerRemoving(player)
 	end)
 end
 
@@ -680,20 +699,5 @@ end
 module.BoughtVIP = function(replica)
 	replica:SetValue({ "VIP" }, true)
 end
-
------ Signal Connections -----
-SignalManager["KilledMob"] = Signal.new()
-SignalManager["KilledMob"]:Connect(function(player, incrementPremiumCurrency)
-	local replica = ServerData.GetPlayerReplica(player)
-	if replica then
-		local data = replica.Data
-		local boosts = data.Boosts
-		SetPremiumCurrency(
-			replica,
-			GetNewPremuimCurrency(data.PremiumCurrency, incrementPremiumCurrency, boosts.PremiumCurrencyBoost)
-		)
-		AddSpecialDrops(replica, LootPlanHandler.SpecialDropsLootPlan:GetRandomLoot(), 1)
-	end
-end)
 
 return module
